@@ -261,24 +261,13 @@ export default function DashboardPage() {
                   <div className="text-sm text-gray-500 truncate">{profile?.email ?? "—"}</div>
                 </div>
               </div>
-
               <nav className="space-y-2">
                 <a className="block px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 font-medium">Dashboard</a>
                 <a className="block px-3 py-2 rounded-lg hover:bg-gray-50">My Orders</a>
                 <a className="block px-3 py-2 rounded-lg hover:bg-gray-50">Saved Designs</a>
                 <a className="block px-3 py-2 rounded-lg hover:bg-gray-50">Account</a>
               </nav>
-
               <div className="mt-6 border-t border-gray-100 pt-4 text-sm text-gray-600">
-                <button
-                  onClick={() => {
-                    navigator.clipboard?.writeText(profile?.email || "");
-                    alert("Email copied to clipboard");
-                  }}
-                  className="w-full text-left"
-                >
-                  Copy email
-                </button>
                 <button onClick={handleLogout} className="mt-2 w-full text-left text-rose-600">
                   Sign out
                 </button>
@@ -389,28 +378,6 @@ export default function DashboardPage() {
                 ))}
               </motion.div>
             </section>
-
-            {/* Chart + Table placeholders */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl p-6 shadow-sm border">
-                <h3 className="text-lg font-semibold mb-4">Sales Overview</h3>
-                <div className="h-56 rounded-md bg-gradient-to-br from-gray-50 to-gray-100 border border-dashed flex items-center justify-center text-gray-400">
-                  Chart placeholder — replace with Chart.js / Recharts component
-                </div>
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl p-6 shadow-sm border">
-                <h3 className="text-lg font-semibold mb-4">Recent Orders</h3>
-                <div className="rounded-md border border-dashed p-4 bg-white/50 text-gray-500">
-                  Table placeholder — replace with your data table
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-gray-400">
-                    <div className="p-2 bg-gray-50 rounded">Order #</div>
-                    <div className="p-2 bg-gray-50 rounded">Date</div>
-                    <div className="p-2 bg-gray-50 rounded">Status</div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
           </main>
         </div>
       </div>

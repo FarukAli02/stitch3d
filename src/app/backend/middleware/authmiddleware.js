@@ -9,11 +9,11 @@ function extractToken(req) {
   if (authHeader && authHeader.startsWith("Bearer ")) {
     return authHeader.split(" ")[1];
   }
-  // 2) Fallback: cookie named "token" (optional, handy if you switch to cookies)
+  // 2) Fallback: cookie named "token"
   if (req.cookies && req.cookies.token) {
     return req.cookies.token;
   }
-  // 3) Fallback: query param ?token=... (not recommended but sometimes useful)
+  // 3) Fallback: query param ?token=...
   if (req.query && req.query.token) {
     return req.query.token;
   }
@@ -27,8 +27,14 @@ export function protectRoute(req, res, next) {
       return res.status(401).json({ message: "Authorization token missing" });
     }
 
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error("FATAL: JWT_SECRET is not set");
+      return res.status(500).json({ message: "Server configuration error" });
+    }
+
     // Verify token; throws on invalid/expired token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, secret);
 
     // attach minimal user info for downstream handlers
     req.user = {
@@ -38,8 +44,7 @@ export function protectRoute(req, res, next) {
     };
     return next();
   } catch (err) {
-    console.error("Auth middleware error:", err?.message || err);
-    // differentiate expired token vs invalid token where possible
+    console.error("Auth middleware error:", err?.stack ?? err);
     if (err && err.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Token expired" });
     }
@@ -50,14 +55,11 @@ export function protectRoute(req, res, next) {
 /**
  * requireRole(...roles)
  * Usage: router.get("/supplier-only", protectRoute, requireRole("supplier"), handler)
- * Accepts one or many roles (strings). If user role not in allowed set -> 403.
  */
 export function requireRole(...allowedRoles) {
-  // allow array or spread
   const allowed = new Set(allowedRoles.flat());
   return (req, res, next) => {
     try {
-      // enforce that protectRoute ran before requireRole
       if (!req.user || !req.user.role) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -66,10 +68,8 @@ export function requireRole(...allowedRoles) {
       }
       return next();
     } catch (err) {
-      console.error("requireRole error:", err);
+      console.error("requireRole error:", err?.stack ?? err);
       return res.status(500).json({ message: "Server error" });
     }
   };
 }
-
-export default { protectRoute, requireRole };
