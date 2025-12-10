@@ -35,9 +35,7 @@ export default function Cart() {
   const subtotal = useMemo(() => {
     return cartItems.reduce((acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
   }, [cartItems]);
-
   const total = useMemo(() => subtotal + SHIPPING_FEE, [subtotal]);
-
   const handleUpdateQuantity = (id, newQuantity) => {
     const quantity = Math.max(1, Math.floor(newQuantity) || 1);
     setCartItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
@@ -75,11 +73,9 @@ export default function Cart() {
     <main className="min-h-screen bg-gray-950 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <CartHeader />
-
         <h1 className="text-3xl font-extrabold text-white mt-8 mb-6">
           Your Shopping Cart ({cartItems.length} items)
         </h1>
-
         {cartItems.length === 0 ? (
           <div className="text-center p-12 bg-gray-900 rounded-xl border border-gray-800 shadow-xl">
             <p className="text-gray-400 text-lg">Your cart is empty. Time to design your first jacket!</p>
@@ -146,12 +142,10 @@ export default function Cart() {
                 </div>
               ))}
             </div>
-
             {/* Column 2: Order Summary */}
             <div className="lg:col-span-1">
               <div className="sticky top-24 bg-gray-800 p-6 rounded-xl shadow-2xl border border-gray-700">
                 <h2 className="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-3">Order Summary</h2>
-
                 <div className="space-y-3 text-gray-300">
                   <div className="flex justify-between">
                     <p>Subtotal ({cartItems.length} items)</p>
@@ -166,7 +160,6 @@ export default function Cart() {
                     <p className="text-xl font-extrabold text-indigo-400">${total.toFixed(2)}</p>
                   </div>
                 </div>
-
                 <button
                   onClick={handleCheckout}
                   disabled={cartItems.length === 0}
@@ -178,7 +171,6 @@ export default function Cart() {
             </div>
           </div>
         )}
-
         <div className="h-16" />
       </div>
     </main>

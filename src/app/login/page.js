@@ -20,13 +20,10 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        // Save token and redirect by role
         localStorage.setItem("token", data.token);
         setMessage("✅ Success! Redirecting...");
-        // short pause so user sees message
         setTimeout(() => {
-          if (data.role === "supplier") router.push("/supplier/dashboard");
-          else router.push("/customer/dashboard");
+          if (data.role === "customer") router.push("/customer/dashboard");
         }, 400);
       } else {
         setMessage(`❌ ${data.message || "Login failed. Please check your credentials."}`);
@@ -38,7 +35,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-100 p-4">
       <div className="w-full max-w-md bg-gray-900 border border-gray-800 shadow-2xl shadow-indigo-900/20 rounded-xl p-6 sm:p-8 transition-all duration-300">
@@ -68,13 +64,11 @@ export default function Login() {
             autoComplete="current-password"
             required
           />
-
           <div className="flex items-center justify-between text-xs text-gray-400">
             <Link href="/forgotpassword" className="hover:text-indigo-400 underline">
               Forgot password?
             </Link>
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -100,10 +94,6 @@ export default function Login() {
           <div>Don't have an account?</div>
           <Link href="/signup" className="text-indigo-400 hover:text-indigo-300 font-semibold hover:underline">
             Sign up
-          </Link>
-          <span className="text-gray-600">or</span>
-          <Link href="/supplier/signup" className="text-indigo-400 hover:text-indigo-300 font-semibold hover:underline">
-            Sign up as supplier
           </Link>
         </div>
       </div>

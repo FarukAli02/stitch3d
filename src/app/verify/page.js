@@ -33,21 +33,17 @@ export default function Verify() {
       setMessage("❌ A network error occurred during verification.");
     }
   };
-
   const handleResend = async () => {
     if (!email) return setResendMessage("❌ Missing email parameter.");
     setResending(true);
     setResendMessage("Sending new code...");
-
     try {
       const res = await fetch("http://localhost:5000/api/auth/resend-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
       const data = await res.json();
-      
       if (res.ok) {
         setResendMessage(`✅ ${data.message || "New code sent successfully!"}`);
       } else {
@@ -59,11 +55,9 @@ export default function Verify() {
       setResending(false);
     }
   };
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-100 p-4">
-      <div className="w-full max-w-md bg-gray-900 border border-gray-800 shadow-2xl shadow-indigo-900/20 rounded-xl p-6 sm:p-8 transition-all duration-300">
-        
+      <div className="w-full max-w-md bg-gray-900 border border-gray-800 shadow-2xl shadow-indigo-900/20 rounded-xl p-6 sm:p-8 transition-all duration-300">     
         <h1 className="text-3xl font-extrabold text-center text-white mb-2 tracking-tight">
           Verify Your Stitch<span className="text-indigo-400">3D</span> Account
         </h1>
@@ -81,7 +75,6 @@ export default function Verify() {
             className="w-full border border-gray-700 bg-gray-800 rounded-lg p-4 text-center tracking-[0.5em] text-2xl font-mono text-white placeholder-gray-500 transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             required
           />
-
           <button
             type="submit"
             className="w-full py-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base shadow-lg shadow-indigo-600/30 transition-all duration-300 uppercase tracking-wider"
@@ -89,7 +82,6 @@ export default function Verify() {
             Verify Account
           </button>
         </form>
-
         {(message || resendMessage) && (
             <div 
               className={`mt-5 text-center text-sm p-4 rounded-lg font-medium transition-colors ${
@@ -103,7 +95,6 @@ export default function Verify() {
               {message || resendMessage}
             </div>
           )}
-
         <div className="text-center mt-6">
           <p className="text-sm text-gray-400">
             Didn’t receive the code?{" "}

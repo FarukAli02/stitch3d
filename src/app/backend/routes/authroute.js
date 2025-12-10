@@ -5,6 +5,7 @@ import {
   signup,
   verifyCode,
   login,
+  logout,
   resendCode,
   getMe,
   updateProfile,
@@ -30,27 +31,27 @@ router.put("/profile", protectRoute, updateProfile);
 router.put("/profile/password", protectRoute, changePassword);
 
 // --- Supplier-specific routes (example) ---
-router.get(
-  "/supplier/profile",
-  protectRoute,
-  requireRole("supplier"),
-  async (req, res) => {
-    try {
-      const [rows] = await db.query(
-        `SELECT u.user_id, u.first_name, u.last_name, u.email, s.company_name, s.phone, s.address
-         FROM users u 
-         JOIN suppliers s ON u.user_id = s.user_id
-         WHERE u.user_id = ?`,
-        [req.user.id]
-      );
-      if (!rows.length) return res.status(404).json({ message: "Supplier not found" });
-      res.json(rows[0]);
-    } catch (err) {
-      console.error("Supplier profile error:", err?.stack ?? err);
-      res.status(500).json({ message: "Error fetching supplier profile" });
-    }
-  }
-);
+// router.get(
+//   "/supplier/profile",
+//   protectRoute,
+//   requireRole("supplier"),
+//   async (req, res) => {
+//     try {
+//       const [rows] = await db.query(
+//         `SELECT u.user_id, u.first_name, u.last_name, u.email, s.company_name, s.phone, s.address
+//          FROM users u 
+//          JOIN suppliers s ON u.user_id = s.user_id
+//          WHERE u.user_id = ?`,
+//         [req.user.id]
+//       );
+//       if (!rows.length) return res.status(404).json({ message: "Supplier not found" });
+//       res.json(rows[0]);
+//     } catch (err) {
+//       console.error("Supplier profile error:", err?.stack ?? err);
+//       res.status(500).json({ message: "Error fetching supplier profile" });
+//     }
+//   }
+// );
 
 // --- Customer-specific routes (example) ---
 router.get(

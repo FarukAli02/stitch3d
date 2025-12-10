@@ -11,7 +11,6 @@ const SignupSchema = Yup.object().shape({
     .matches(/^[^\s@]+@[^\s@]+\.(com|pk|org|uk)$/i, "Email must end with .com, .pk, .org, or .uk")
     .required("Email is required"),
   password: Yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
-  role: Yup.string().oneOf(["customer", "supplier"]).required(),
 });
 export default function Signup() {
   const router = useRouter();
@@ -23,14 +22,12 @@ export default function Signup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-
       const data = await res.json();
       if (!res.ok) {
         setStatus({ message: `❌ ${data.message || "Signup failed. Try again."}`, type: "error" });
         setSubmitting(false);
         return;
       }
-
       setStatus({ message: "✅ Account created! Check your email for a verification code.", type: "success" });
       setTimeout(() => router.push(`/verify?email=${values.email}`), 1500);
     } catch (err) {
@@ -39,7 +36,6 @@ export default function Signup() {
       setSubmitting(false);
     }
   }
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-100 p-4">
       <div className="w-full max-w-md bg-gray-900 border border-gray-800 shadow-2xl shadow-indigo-900/20 rounded-xl p-6 sm:p-8 transition-all duration-300">
@@ -49,14 +45,12 @@ export default function Signup() {
         <p className="text-sm text-gray-400 text-center mb-6">
           Sign up to start customizing your leather jackets.
         </p>
-
         <Formik
           initialValues={{
             firstName: "",
             lastName: "",
             email: "",
             password: "",
-            role: "customer",
           }}
           validationSchema={SignupSchema}
           onSubmit={handleSignup}
@@ -74,7 +68,6 @@ export default function Signup() {
                     {(msg) => <div className="mt-2 text-xs text-rose-300">{msg}</div>}
                   </ErrorMessage>
                 </div>
-
                 <div>
                   <Field
                     name="lastName"
@@ -86,7 +79,6 @@ export default function Signup() {
                   </ErrorMessage>
                 </div>
               </div>
-
               <div>
                 <Field
                   name="email"
@@ -98,7 +90,6 @@ export default function Signup() {
                   {(msg) => <div className="mt-2 text-xs text-rose-300">{msg}</div>}
                 </ErrorMessage>
               </div>
-
               <div>
                 <Field
                   type="password"
@@ -110,19 +101,6 @@ export default function Signup() {
                   {(msg) => <div className="mt-2 text-xs text-rose-300">{msg}</div>}
                 </ErrorMessage>
               </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Account Type</label>
-                <Field
-                  as="select"
-                  name="role"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 focus:outline-none"
-                >
-                  <option value="customer">Customer</option>
-                  <option value="supplier">Supplier</option>
-                </Field>
-              </div>
-
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -130,7 +108,6 @@ export default function Signup() {
               >
                 {isSubmitting ? "Creating..." : "Create Account"}
               </button>
-
               {status && status.message && (
                 <div
                   className={`mt-5 text-center text-sm p-4 rounded-lg font-medium transition-colors ${
@@ -147,7 +124,6 @@ export default function Signup() {
             </Form>
           )}
         </Formik>
-
         <p className="text-center text-sm mt-6 text-gray-400">
           Already have an account?{" "}
           <a

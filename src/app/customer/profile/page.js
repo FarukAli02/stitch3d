@@ -3,8 +3,8 @@
 // Note: Logic aligned with authcontroller.js and authroute.js
 
 "use client";
-
 import React, { useEffect, useState } from "react";
+import Footer from "@/app/home/components/Footer";
 import { 
   Pencil, 
   X, 
@@ -18,10 +18,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-
 // Keeping your existing API path
 const API_BASE = "http://localhost:5000/api/auth";
-
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -398,7 +396,9 @@ export default function ProfilePage() {
             </motion.div>
           )}
         </AnimatePresence>
-
+        <div className="h-16" >
+                <Footer />
+              </div>
       </div>
     </main>
   );

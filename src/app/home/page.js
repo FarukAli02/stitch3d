@@ -7,14 +7,12 @@ import CustomizationFeatures from "./components/CustomizationFeatures";
 import HowItWorks from "./components/HowItWorks";
 import Testimonials from "./components/Testimonials";
 import Footer from "./components/Footer";
-
 export default function Home() {
   return (
     <div>
       <Navbar />
       {/* Keep HeroSection outside light background */}
       <HeroSection />
-
       {/* Light sections start here */}
       <div className={styles["home-page"]}>
         <ProductGallery />

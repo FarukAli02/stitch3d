@@ -1,12 +1,13 @@
-// pages/dashboard.jsx
 "use client";
-
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Footer from "@/app/home/components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingCart,
   Moon,
+  Sun,
+  Bell,
   User as UserIcon,
   LogOut,
   Settings,
@@ -14,16 +15,15 @@ import {
 
 /**
  * Single-file Dashboard page with Framer Motion + lucide-react
- * - Paste into pages/dashboard.jsx (Page Router)
+ * - Paste into pages/dashboard.js (Page Router)
  * - Requires: tailwindcss, framer-motion, lucide-react
  */
 
 export default function DashboardPage() {
   const router = useRouter();
-
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profile, setProfile] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
+  const [cartCount, setCartCount] = useState(null);
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const [products, setProducts] = useState([
@@ -43,7 +43,7 @@ export default function DashboardPage() {
       id: 3,
       title: "Minimalist Leather",
       price: 320,
-      img: "https://tse2.mm.bing.net/th/id/OIP.XWHyVbqQhjR0BpSWHbCYQwHaJ4?rs=1&pid=ImgDetMain&o=7&rm=3",
+      img: "https://tse2.mm.bing.net/th//id/OIP.XWHyVbqQhjR0BpSWHbCYQwHaJ4?rs=1&pid=ImgDetMain&o=7&rm=3",
     },
     {
       id: 4,
@@ -52,17 +52,13 @@ export default function DashboardPage() {
       img: "https://th.bing.com/th/id/OIP.ergNH0eXxWFFcQTm1HTOZgHaHy?w=172&h=181&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3",
     },
   ]);
-
   const [stats, setStats] = useState({
-    totalOrders: 8,
-    activeCustoms: 3,
-    savedDesigns: 5,
-    inProgress: 2,
+    totalOrders: 0,
+    activeCustoms: 0,
+    savedDesigns: 0,
+    inProgress: 0,
   });
-
   const menuRef = useRef(null);
-
-  // profile fetch
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) {
@@ -109,7 +105,6 @@ export default function DashboardPage() {
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
-
   const handleLogout = async () => {
     try {
       await fetch("http://localhost:5000/api/auth/logout", { method: "POST" });
@@ -120,7 +115,6 @@ export default function DashboardPage() {
       router.replace("/login");
     }
   };
-
   const handleAddToCart = (product) => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const idx = cart.findIndex((i) => i.id === product.id);
@@ -147,16 +141,13 @@ export default function DashboardPage() {
       </main>
     );
   }
-
   // framer motion variants
   const heroVariants = {
     hidden: { opacity: 0, y: 12 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
   };
-
   const cardHover = { scale: 1.02, y: -4, boxShadow: "0 12px 30px rgba(37,99,235,0.12)" };
   const btnTap = { scale: 0.98 };
-
   const gridStagger = {
     visible: {
       transition: { staggerChildren: 0.08 },
@@ -166,7 +157,6 @@ export default function DashboardPage() {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
   };
-
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
@@ -200,7 +190,6 @@ export default function DashboardPage() {
             <button aria-label="toggle-theme" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
               <Moon className="w-5 h-5 text-gray-600" />
             </button>
-
             {/* profile */}
             <div className="relative" ref={menuRef}>
               <motion.button
@@ -214,7 +203,6 @@ export default function DashboardPage() {
                   {initials}
                 </div>
               </motion.button>
-
               <AnimatePresence>
                 {isProfileMenuOpen && (
                   <motion.div
@@ -263,8 +251,9 @@ export default function DashboardPage() {
               </div>
               <nav className="space-y-2">
                 <a className="block px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 font-medium">Dashboard</a>
-                <a className="block px-3 py-2 rounded-lg hover:bg-gray-50">My Orders</a>
-                <a className="block px-3 py-2 rounded-lg hover:bg-gray-50">Saved Designs</a>
+                <a className="block px-3 py-2 rounded-lg hover:bg-gray-50" href="/customer/orders">My Orders</a>
+                <a className="block px-3 py-2 rounded-lg hover:bg-gray-50" href="/customer/designs">Saved Designs</a>
+                <a className="block px-3 py-2 rounded-lg hover: bg-gray-50" href="/customer/messages">My Messages</a>
                 <a className="block px-3 py-2 rounded-lg hover:bg-gray-50">Account</a>
               </nav>
               <div className="mt-6 border-t border-gray-100 pt-4 text-sm text-gray-600">
@@ -381,8 +370,9 @@ export default function DashboardPage() {
           </main>
         </div>
       </div>
-
-      <div className="h-16" />
+      <div className="h-16" >
+        <Footer />
+      </div>
     </main>
   );
 }

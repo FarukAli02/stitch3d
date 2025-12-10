@@ -1,6 +1,6 @@
 "use client";
-
 import React, { useEffect, useMemo, useState } from "react";
+import Footer from "@/app/home/components/Footer";
 import { Eye, Search, Filter, ChevronLeft, ChevronRight, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -66,14 +66,12 @@ const SAMPLE_ORDERS = [
     tracking_url: "",
   },
 ];
-
 const STATUS_LABELS = {
   pending: { label: "Pending", style: "bg-yellow-700/15 text-yellow-300 border-yellow-700/30" },
   in_progress: { label: "In Progress", style: "bg-indigo-700/15 text-indigo-300 border-indigo-700/30" },
   completed: { label: "Completed", style: "bg-emerald-700/15 text-emerald-300 border-emerald-700/30" },
   cancelled: { label: "Cancelled", style: "bg-rose-700/15 text-rose-300 border-rose-700/30" },
 };
-
 function formatDate(iso) {
   try {
     const d = new Date(iso);
@@ -82,7 +80,6 @@ function formatDate(iso) {
     return iso;
   }
 }
-
 export default function OrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState([]);
@@ -94,7 +91,6 @@ export default function OrdersPage() {
   const [selected, setSelected] = useState(null);
   const [toast, setToast] = useState({ type: "", message: "" });
   const [busyOrders, setBusyOrders] = useState({}); // { orderId: true }
-
   function showToast(type, message, ms = 4000) {
     setToast({ type, message });
     if (ms) setTimeout(() => setToast({ type: "", message: "" }), ms);
@@ -495,9 +491,10 @@ export default function OrdersPage() {
             </div>
           </div>
         )}
-
-        <div className="h-16" />
       </div>
+        <div className="h-16" >
+              <Footer />
+            </div>
     </main>
   );
 }

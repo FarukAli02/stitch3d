@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-
 /**
  * Reset Password Page
  * - Prefills email from ?email= query param (if present)
@@ -22,16 +21,12 @@ export default function ResetPasswordPage() {
   });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
   const otpRef = useRef(null);
-
   useEffect(() => {
     // If email was passed via query param, focus OTP input to speed up the UX
     if (emailFromQuery && otpRef.current) otpRef.current.focus();
   }, [emailFromQuery]);
-
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
   function validate() {
     if (!form.email.trim() || !form.code.trim() || !form.newPassword.trim() || !form.confirmPassword.trim()) {
       setMessage("⚠️ All fields are required.");
@@ -51,11 +46,9 @@ export default function ResetPasswordPage() {
     }
     return true;
   }
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-
     setLoading(true);
     setMessage("Resetting password...");
 
@@ -69,9 +62,7 @@ export default function ResetPasswordPage() {
           newPassword: form.newPassword,
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         // Backend should provide useful message (Invalid OTP, expired, etc.)
         setMessage(`❌ ${data.message || "Unable to reset password."}`);
@@ -87,7 +78,6 @@ export default function ResetPasswordPage() {
       setLoading(false);
     }
   };
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-100 p-4">
       <div className="w-full max-w-md bg-gray-900 border border-gray-800 shadow-2xl rounded-xl p-6 sm:p-8">
@@ -95,7 +85,6 @@ export default function ResetPasswordPage() {
         <p className="text-sm text-gray-400 text-center mb-6">
           Enter the 6-digit code we emailed you and choose a new password.
         </p>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             name="email"
@@ -106,7 +95,6 @@ export default function ResetPasswordPage() {
             className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             required
           />
-
           <input
             name="code"
             ref={otpRef}
@@ -117,7 +105,6 @@ export default function ResetPasswordPage() {
             className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             required
           />
-
           <input
             name="newPassword"
             type="password"
@@ -127,7 +114,6 @@ export default function ResetPasswordPage() {
             className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             required
           />
-
           <input
             name="confirmPassword"
             type="password"
@@ -145,7 +131,6 @@ export default function ResetPasswordPage() {
             {loading ? "Resetting..." : "Reset Password"}
           </button>
         </form>
-
         {message && (
           <div
             className={`mt-5 text-center text-sm p-4 rounded-lg font-medium ${

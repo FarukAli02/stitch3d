@@ -3,38 +3,31 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // ✅ import router
 import { Mail, CheckCircle, AlertTriangle } from "lucide-react";
-
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter(); // ✅ router hook
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !email.includes("@")) {
       setMessage("⚠️ Please enter a valid email address.");
       return;
     }
-
     setLoading(true);
     setMessage("Sending password reset code...");
     setIsSuccess(false);
-
     try {
       const res = await fetch("http://localhost:5000/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
       const data = await res.json();
-
       if (res.ok) {
         setMessage(`✅ ${data.message || "Password reset code sent! Check your email."}`);
         setIsSuccess(true);
-
         // ✅ Redirect to reset-password page after short delay
         setTimeout(() => {
           router.push(`/resetpassword?email=${encodeURIComponent(email)}`);
@@ -51,7 +44,6 @@ export default function ForgotPassword() {
       setLoading(false);
     }
   };
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-100 p-4">
       <div className="w-full max-w-md bg-gray-900 border border-gray-800 shadow-2xl shadow-indigo-900/20 rounded-xl p-6 sm:p-8 transition-all duration-300">
@@ -78,7 +70,6 @@ export default function ForgotPassword() {
             />
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -87,7 +78,6 @@ export default function ForgotPassword() {
             {loading ? "Sending..." : "Send Reset Code"}
           </button>
         </form>
-
         {message && (
           <div
             className={`mt-5 text-center text-sm p-4 rounded-lg font-medium transition-colors flex items-center gap-3 justify-center ${
@@ -106,7 +96,6 @@ export default function ForgotPassword() {
             {message.substring(2).trim()}
           </div>
         )}
-
         <p className="text-center text-sm mt-6 text-gray-400">
           Remember your password?{" "}
           <Link

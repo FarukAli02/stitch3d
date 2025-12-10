@@ -3,8 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../config/db.js";
 import { sendVerificationEmail, sendResetPasswordEmail } from "../utils/email.js";
-import dotenv from "dotenv";
-dotenv.config();
+
 
 // --- Helper: Find user by email ---
 async function findUserByEmail(email) {
@@ -26,10 +25,10 @@ async function findCustomerByUserId(userId) {
   const [rows] = await db.query("SELECT * FROM customers WHERE user_id = ?", [userId]);
   return rows.length ? rows[0] : null;
 }
-async function findSupplierByUserId(userId) {
-  const [rows] = await db.query("SELECT * FROM suppliers WHERE user_id = ?", [userId]);
-  return rows.length ? rows[0] : null;
-}
+// async function findSupplierByUserId(userId) {
+//   const [rows] = await db.query("SELECT * FROM suppliers WHERE user_id = ?", [userId]);
+//   return rows.length ? rows[0] : null;
+// }
 
 // =============================
 // SIGNUP & EMAIL VERIFICATION
@@ -194,10 +193,6 @@ export async function getMe(req, res) {
       const customer = await findCustomerByUserId(id);
       return res.json({ ...user, customer });
     }
-    if (user.role === "supplier") {
-      const supplier = await findSupplierByUserId(id);
-      return res.json({ ...user, supplier });
-    }
 
     res.json(user);
   } catch (err) {
@@ -214,8 +209,9 @@ export async function updateProfile(req, res) {
 
     const hasUserFields = !!(firstName || lastName);
     const hasCustomer = !!req.body.customer;
-    const hasSupplier = !!req.body.supplier;
-    if (!hasUserFields && !hasCustomer && !hasSupplier) {
+    // const hasSupplier = !!req.body.supplier;
+    //&& !hasSupplier
+    if (!hasUserFields && !hasCustomer) {
       return res.status(400).json({ message: "At least one field is required" });
     }
 
@@ -244,29 +240,10 @@ export async function updateProfile(req, res) {
       }
     }
 
-    if (hasSupplier) {
-      const supplier = req.body.supplier || {};
-      const sFields = [];
-      const sValues = [];
-      if (supplier.company_name !== undefined) { sFields.push("company_name = ?"); sValues.push(supplier.company_name || null); }
-      if (supplier.phone !== undefined) { sFields.push("phone = ?"); sValues.push(supplier.phone || null); }
-      if (supplier.address !== undefined) { sFields.push("address = ?"); sValues.push(supplier.address || null); }
-      if (supplier.approved !== undefined) { sFields.push("approved = ?"); sValues.push(supplier.approved ? 1 : 0); }
-
-      if (sFields.length) {
-        sValues.push(id);
-        await db.query(`UPDATE suppliers SET ${sFields.join(", ")} WHERE user_id = ?`, sValues);
-      }
-    }
-
     const updated = await findUserById(id);
     if (updated.role === "customer") {
       const customer = await findCustomerByUserId(id);
       return res.json({ message: "Profile updated successfully", user: updated, customer });
-    }
-    if (updated.role === "supplier") {
-      const supplier = await findSupplierByUserId(id);
-      return res.json({ message: "Profile updated successfully", user: updated, supplier });
     }
     res.json({ message: "Profile updated successfully", user: updated });
   } catch (err) {
@@ -274,7 +251,6 @@ export async function updateProfile(req, res) {
     res.status(500).json({ message: "Server error updating profile" });
   }
 }
-
 export async function changePassword(req, res) {
   try {
     const { oldPassword, newPassword, confirmPassword } = req.body;
@@ -282,8 +258,8 @@ export async function changePassword(req, res) {
 
     if (!oldPassword || !newPassword)
       return res.status(400).json({ message: "Old and new password required" });
-    if (newPassword.length < 8)
-      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
     if (confirmPassword && newPassword !== confirmPassword)
       return res.status(400).json({ message: "Passwords do not match" });
 

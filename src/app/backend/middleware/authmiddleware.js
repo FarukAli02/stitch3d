@@ -1,7 +1,5 @@
 // middleware/authmiddleware.js
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-dotenv.config();
 
 function extractToken(req) {
   // 1) Authorization header (Bearer)

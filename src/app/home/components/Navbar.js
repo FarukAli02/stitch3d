@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import ThemeToggle from './ThemeToggle';
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -33,9 +34,9 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:block">
-    <Link href="/signup">
+    <Link href="/login">
         <button className="px-6 py-2 bg-amber-700 text-white rounded-md hover:bg-amber-800 transition-colors" data-testid="button-start-designing">
-            Sign Up
+            Login
         </button>
     </Link>
 </div>
