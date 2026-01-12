@@ -13,6 +13,4 @@ app.use(
 app.use(express.json());
 // ✅ This mounts all routes like /api/auth/signup, /api/auth/verify-code, etc.
 app.use("/api/auth", authroutes);
-// Remove this ↓ (it’s invalid and causes "requires a middleware" errors)
-// app.use("/api/")
 app.listen(5000, () => console.log("✅ Server running on http://localhost:5000"));

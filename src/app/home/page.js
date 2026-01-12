@@ -6,7 +6,7 @@ import ProductGallery from "./components/ProductGallery";
 import CustomizationFeatures from "./components/CustomizationFeatures";
 import HowItWorks from "./components/HowItWorks";
 import Testimonials from "./components/Testimonials";
-import Footer from "./components/Footer";
+import Footer from "@/app/components/footer";
 export default function Home() {
   return (
     <div>

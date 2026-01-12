@@ -18,7 +18,7 @@ const features = [
       </svg>
     ),
     title: "Color Options",
-    description: "Select from classic blacks and browns to bold burgundies, greens, and custom dyed colors"
+    description: "Select from classic blacks and browns to customize your jackets"
   },
   {
     id: 3,
@@ -28,7 +28,7 @@ const features = [
       </svg>
     ),
     title: "Perfect Fit",
-    description: "Custom measurements ensure your jacket fits like a glove. Professional fitting guide included"
+    description: "Custom measurements ensure your jacket fits like a glove"
   },
   {
     id: 4,
@@ -38,7 +38,7 @@ const features = [
       </svg>
     ),
     title: "Personalization",
-    description: "Add monograms, custom linings, and hardware choices to make your jacket truly unique"
+    description: "Add patches, sleevs to make your jacket truly unique"
   }
 ];
 

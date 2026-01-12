@@ -35,8 +35,9 @@ async function findCustomerByUserId(userId) {
 // =============================
 export async function signup(req, res) {
   try {
-    const { firstName, lastName, email, password, role } = req.body;
-    if (!firstName || !lastName || !email || !password || !role)
+    const { firstName, lastName, email, password } = req.body;
+
+    if (!firstName || !lastName || !email || !password)
       return res.status(400).json({ message: "All fields are required" });
 
     const normalizedEmail = email.toLowerCase();
@@ -45,8 +46,12 @@ export async function signup(req, res) {
 
     const hashed = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 10 * 60 * 1000);
-// 10 minutes
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Determine role automatically based on route
+    // e.g., /signup/customer, /signup/vendor, /signup/supplier
+    let role = req.params.type?.toLowerCase();
+    if (!["customer", "supplier", "vendor"].includes(role)) role = "customer"; // default to customer
 
     // Insert user
     const [result] = await db.query(
@@ -62,18 +67,16 @@ export async function signup(req, res) {
     if (role === "customer") {
       await db.query(`INSERT INTO customers (user_id) VALUES (?)`, [userId]);
     } else if (role === "supplier") {
-      // set approved default per your schema (1 or 0)
-      await db.query(
-        `INSERT INTO suppliers (user_id, company_name, phone, address, approved) VALUES (?, ?, ?, ?, ?)`,
-        [userId, null, null, null, 1]
-      );
+      await db.query(`INSERT INTO suppliers (user_id, approved) VALUES (?, 1)`, [userId]);
+    } else if (role === "vendor") {
+      await db.query(`INSERT INTO vendors (user_id) VALUES (?)`, [userId]);
     }
 
-    // send verification email (sends code in email body)
+    // Send verification email
     await sendVerificationEmail(normalizedEmail, otp);
 
     res.status(201).json({
-      message: "Signup successful. Check your email for a 6-digit verification code.",
+      message: `Signup successful as ${role}. Check your email for a 6-digit verification code.`,
       email: normalizedEmail,
       role,
     });

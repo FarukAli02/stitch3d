@@ -1,3 +1,4 @@
+
 const testimonials = [
   {
     id: 1,
@@ -28,7 +29,7 @@ export default function Testimonials() {
       <div className="container mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-4xl md:text-5xl font-bold font-serif mb-4">
-            What Our Customers Say
+           Hear from our customers
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Join thousands of satisfied customers who've crafted their perfect jacket

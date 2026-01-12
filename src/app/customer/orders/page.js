@@ -1,28 +1,14 @@
+// File: app/customer/orders/page.js
+// Purpose: Customer orders management with tracking - Light Theme
+// Author: Stitch3D-Dev
+// Env Required: None (frontend only)
+
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import Footer from "@/app/home/components/Footer";
-import { Eye, Search, Filter, ChevronLeft, ChevronRight, RefreshCw, Trash2 } from "lucide-react";
+import Footer from "@/app/components/footer";
+import { Eye, Search, Filter, ChevronLeft, ChevronRight, RefreshCw, Trash2, Package, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-/**
- * src/app/Customer/Orders/page.js
- *
- * Customer-facing Orders page (single file).
- * - Shows only the current customer's orders (fetches from backend with Bearer token)
- * - Dark, high-contrast styling consistent with your Dashboard/Profile pages
- * - Search, filter, pagination, details panel
- * - Actions suitable for customers: View details, Reorder, Cancel (when allowed), Track
- * - Uses safe fallbacks (sample orders) if backend not available during testing
- *
- * Backend expectations (unchanged server):
- * GET  http://localhost:5000/api/orders/my        -> returns array of orders for logged-in user
- * POST http://localhost:5000/api/orders/:id/cancel -> cancels order (if allowed)
- * POST http://localhost:5000/api/orders/:id/reorder -> creates a reorder (returns new order or success)
- *
- * Auth: reads Bearer token from localStorage 'token'
- *
- * Drop this file in: src/app/Customer/Orders/page.js
- */
 const API_BASE = "http://localhost:5000";
 
 const SAMPLE_ORDERS = [
@@ -66,20 +52,23 @@ const SAMPLE_ORDERS = [
     tracking_url: "",
   },
 ];
+
 const STATUS_LABELS = {
-  pending: { label: "Pending", style: "bg-yellow-700/15 text-yellow-300 border-yellow-700/30" },
-  in_progress: { label: "In Progress", style: "bg-indigo-700/15 text-indigo-300 border-indigo-700/30" },
-  completed: { label: "Completed", style: "bg-emerald-700/15 text-emerald-300 border-emerald-700/30" },
-  cancelled: { label: "Cancelled", style: "bg-rose-700/15 text-rose-300 border-rose-700/30" },
+  pending: { label: "Pending", style: "bg-amber-50 text-amber-700 border-amber-200" },
+  in_progress: { label: "In Progress", style: "bg-blue-50 text-blue-700 border-blue-200" },
+  completed: { label: "Completed", style: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  cancelled: { label: "Cancelled", style: "bg-rose-50 text-rose-700 border-rose-200" },
 };
+
 function formatDate(iso) {
   try {
     const d = new Date(iso);
-    return d.toLocaleString();
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   } catch {
     return iso;
   }
 }
+
 export default function OrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState([]);
@@ -90,7 +79,8 @@ export default function OrdersPage() {
   const perPage = 6;
   const [selected, setSelected] = useState(null);
   const [toast, setToast] = useState({ type: "", message: "" });
-  const [busyOrders, setBusyOrders] = useState({}); // { orderId: true }
+  const [busyOrders, setBusyOrders] = useState({});
+
   function showToast(type, message, ms = 4000) {
     setToast({ type, message });
     if (ms) setTimeout(() => setToast({ type: "", message: "" }), ms);
@@ -101,11 +91,9 @@ export default function OrdersPage() {
     return localStorage.getItem("token");
   }
 
-  // Fetch customer's orders
   useEffect(() => {
     const t = getToken();
     if (!t) {
-      // not logged in — redirect to login
       router.replace("/login");
       return;
     }
@@ -117,13 +105,11 @@ export default function OrdersPage() {
           headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
         });
         if (!res.ok) {
-          // fallback to sample list gracefully
           console.warn("Orders fetch failed, using sample data");
           setOrders(SAMPLE_ORDERS);
           return;
         }
         const data = await res.json();
-        // expected: array of orders shaped similarly to SAMPLE_ORDERS
         setOrders(Array.isArray(data) ? data : SAMPLE_ORDERS);
       } catch (err) {
         console.error("Orders fetch error:", err);
@@ -134,7 +120,6 @@ export default function OrdersPage() {
     })();
   }, [router]);
 
-  // Derived filtered & paged lists
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return orders.filter((o) => {
@@ -155,7 +140,6 @@ export default function OrdersPage() {
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
-  // Cancel order (customer action) — only if backend supports it and order.can_cancel true
   const cancelOrder = async (orderId) => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
     const t = getToken();
@@ -168,7 +152,6 @@ export default function OrdersPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Cancel failed");
-      // update local order status
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: "cancelled", can_cancel: false, can_reorder: true } : o)));
       showToast("success", data.message || "Order cancelled");
     } catch (err) {
@@ -179,7 +162,6 @@ export default function OrdersPage() {
     }
   };
 
-  // Reorder (create a new order based on existing one)
   const reorder = async (orderId) => {
     const t = getToken();
     if (!t) { router.replace("/login"); return; }
@@ -192,13 +174,9 @@ export default function OrdersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Reorder failed");
       showToast("success", data.message || "Reorder placed");
-      // optionally navigate to new order or refresh
-      // if backend returned a new order ID, open details
       if (data.newOrderId) {
-        // refetch or open new order
-        router.push(`/Customer/Orders/${data.newOrderId}`);
+        router.push(`/customer/orders/${data.newOrderId}`);
       } else {
-        // refresh orders list: quick local append if provided
         if (data.newOrder) setOrders((p) => [data.newOrder, ...p]);
       }
     } catch (err) {
@@ -209,7 +187,6 @@ export default function OrdersPage() {
     }
   };
 
-  // Track — opens tracking_url if present
   const trackOrder = (order) => {
     if (order.tracking_url) {
       window.open(order.tracking_url, "_blank", "noopener");
@@ -219,55 +196,58 @@ export default function OrdersPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <header className="flex items-center justify-between py-4 sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10 border-b border-gray-800">
-          <div className="text-2xl font-extrabold tracking-tight">
-            <span className="text-white">Stitch</span>
-            <span className="text-indigo-400">3D</span>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center gap-4">
+          
+          <button 
+            onClick={() => router.back()}
+            className="p-2 -ml-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
+          <div 
+            className="text-2xl font-extrabold tracking-tight cursor-pointer select-none"
+            onClick={() => router.push('/customer/dashboard')} 
+          >
+            <span className="text-slate-900">Stitch</span>
+            <span className="text-indigo-600">3D</span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.push("/customer/dashboard")} className="px-3 py-2 rounded-md border border-gray-700 text-gray-200 hover:bg-gray-800">Dashboard</button>
-            <button onClick={() => router.push("/customer/profile")} className="px-3 py-2 rounded-md border border-gray-700 text-gray-200 hover:bg-gray-800">Profile</button>
-          </div>
-        </header>
+        </div>
+      </header>
 
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Hero */}
-        <section className="mt-6">
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-900/20">
-            <img src="https://placehold.co/1200x240/0f172a/94a3b8?text=Your+Orders" alt="orders hero" className="w-full h-36 object-cover brightness-60" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent flex items-center pl-6 md:pl-12">
-              <div className="max-w-2xl text-white py-4">
-                <h1 className="text-2xl md:text-3xl font-extrabold leading-snug">Your Orders</h1>
-                <p className="mt-1 text-sm text-gray-300">View orders you placed, track shipments and reorder favorite items.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Your Orders</h1>
+          <p className="text-slate-600">Track and manage all your leather jacket orders in one place</p>
+        </div>
 
         {/* Controls */}
-        <section className="mt-8 bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
-          <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2 flex-1">
-            <Search className="w-4 h-4 text-gray-300" />
+        <div className="mb-6 bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-4 py-3 flex-1 border border-slate-200">
+            <Search className="w-5 h-5 text-slate-400" />
             <input
               value={query}
               onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-              placeholder="Search by order id, item name or amount..."
-              className="bg-transparent outline-none w-full text-white placeholder-gray-400"
+              placeholder="Search by order ID, item name..."
+              className="bg-transparent outline-none w-full text-slate-900 placeholder-slate-400"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-gray-700 px-3 py-2 rounded-lg text-gray-200">
-              <Filter className="w-4 h-4 text-gray-300" />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-lg text-slate-700 border border-slate-200">
+              <Filter className="w-5 h-5 text-slate-500" />
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                className="bg-transparent outline-none text-white"
+                className="bg-transparent outline-none text-slate-900 font-medium"
               >
-                <option value="all">All statuses</option>
+                <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
@@ -277,7 +257,6 @@ export default function OrdersPage() {
 
             <button
               onClick={() => {
-                // quick client-side refresh: try re-fetch, otherwise keep current
                 const t = getToken();
                 if (!t) { router.replace("/login"); return; }
                 (async () => {
@@ -287,90 +266,84 @@ export default function OrdersPage() {
                       const data = await res.json();
                       setOrders(Array.isArray(data) ? data : []);
                       showToast("success", "Orders refreshed");
-                    } else {
-                      showToast("info", "Unable to refresh from server — using cached view.");
                     }
                   } catch (err) {
-                    console.warn("Refresh failed", err);
                     showToast("error", "Refresh failed");
                   }
                 })();
               }}
-              className="px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-gray-200 flex items-center gap-2"
+              className="px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center gap-2 border border-slate-200 transition-colors"
             >
-              <RefreshCw className="w-4 h-4" /> Refresh
+              <RefreshCw className="w-5 h-5" />
+              <span className="hidden sm:inline font-medium">Refresh</span>
             </button>
           </div>
-        </section>
+        </div>
 
-        {/* Orders list */}
-        <section className="mt-6">
-          {loading ? (
-            <div className="animate-pulse space-y-3">
-              <div className="h-20 bg-gray-800 rounded-xl" />
-              <div className="h-20 bg-gray-800 rounded-xl" />
-              <div className="h-20 bg-gray-800 rounded-xl" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 text-center text-gray-300">
-              No orders found. Place your first order — we ship worldwide.
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {paged.map((o) => (
-                <div key={o.id} className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex items-start md:items-center gap-4 w-full md:w-2/3">
-                    <div className="w-14 h-14 rounded-lg bg-indigo-600/20 flex items-center justify-center text-indigo-300 font-semibold">
+        {/* Orders List */}
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-white rounded-xl animate-pulse border border-slate-200" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+            <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+            <p className="text-slate-600 text-lg mb-2">No orders found</p>
+            <p className="text-slate-500 text-sm">Place your first order to see it here</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {paged.map((o) => (
+              <div key={o.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="w-14 h-14 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm flex-shrink-0">
                       {o.id.split("-")[1]}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-start justify-between gap-3 mb-2">
                         <div>
-                          <div className="text-sm text-gray-200 font-semibold">{o.items && o.items[0]?.name ? o.items[0].name : o.id}</div>
-                          <div className="text-xs text-gray-400">{formatDate(o.created_at)}</div>
-                        </div>
-
-                        <div className="hidden md:block text-sm text-gray-300">
-                          <div className="text-right">
-                            <div className="text-xs text-gray-400">Items</div>
-                            <div className="font-medium text-white">{o.items_count}</div>
-                          </div>
+                          <h3 className="text-base font-semibold text-slate-900">{o.items?.[0]?.name || o.id}</h3>
+                          <p className="text-sm text-slate-500 mt-0.5">{formatDate(o.created_at)}</p>
                         </div>
                       </div>
 
-                      <div className="mt-3 flex items-center gap-3 flex-wrap">
-                        <div className={`px-3 py-1 rounded-full text-sm border ${STATUS_LABELS[o.status]?.style || "bg-gray-700 text-gray-300 border-gray-700"}`}>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${STATUS_LABELS[o.status]?.style || "bg-slate-100 text-slate-700 border-slate-200"}`}>
                           {STATUS_LABELS[o.status]?.label || o.status}
-                        </div>
-                        <div className="text-sm text-gray-300">Shipping: <span className="text-white">{o.shipping || "Standard"}</span></div>
-                        <div className="text-sm text-gray-400">Order #{o.id}</div>
+                        </span>
+                        <span className="text-sm text-slate-600">{o.items_count} {o.items_count === 1 ? 'item' : 'items'}</span>
+                        <span className="text-sm text-slate-600">•</span>
+                        <span className="text-sm text-slate-600">{o.shipping}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="text-right mr-2 md:mr-0">
-                      <div className="text-sm text-gray-400">Total</div>
-                      <div className="text-lg font-bold text-white">${Number(o.total).toFixed(2)}</div>
+                    <div className="text-right flex-1 md:flex-initial">
+                      <p className="text-sm text-slate-500">Total</p>
+                      <p className="text-lg font-bold text-slate-900">${Number(o.total).toFixed(2)}</p>
                     </div>
 
                     <button
                       onClick={() => setSelected(o)}
-                      className="px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2"
+                      className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 transition-colors shadow-sm"
                     >
-                      <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Details</span>
+                      <Eye className="w-4 h-4" />
+                      <span className="hidden sm:inline text-sm font-medium">View</span>
                     </button>
 
                     {o.can_cancel && (
                       <button
                         onClick={() => cancelOrder(o.id)}
                         disabled={!!busyOrders[o.id]}
-                        className="px-3 py-2 rounded-md bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-2"
+                        className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
                         title="Cancel order"
                       >
                         <Trash2 className="w-4 h-4" />
-                        <span className="hidden sm:inline">{busyOrders[o.id] ? "Cancelling..." : "Cancel"}</span>
                       </button>
                     )}
 
@@ -378,123 +351,128 @@ export default function OrdersPage() {
                       <button
                         onClick={() => reorder(o.id)}
                         disabled={!!busyOrders[o.id]}
-                        className="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2"
+                        className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
                         title="Reorder"
                       >
                         <RefreshCw className="w-4 h-4" />
-                        <span className="hidden sm:inline">{busyOrders[o.id] ? "Processing..." : "Reorder"}</span>
                       </button>
                     )}
-
-                    <button
-                      onClick={() => trackOrder(o)}
-                      className="px-3 py-2 rounded-md border border-gray-700 text-gray-200 hover:bg-gray-800"
-                      title="Track order"
-                    >
-                      Track
-                    </button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {filtered.length > 0 && (
-            <div className="mt-6 flex items-center justify-between">
-              <div className="text-sm text-gray-300">
-                Showing <strong className="text-white">{filtered.length}</strong> results — page <strong className="text-white">{page}</strong> of <strong className="text-white">{totalPages}</strong>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button onClick={handlePrev} disabled={page === 1} className={`p-2 rounded-md ${page === 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-gray-800 hover:bg-gray-700 text-white"}`}>
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button onClick={handleNext} disabled={page === totalPages} className={`p-2 rounded-md ${page === totalPages ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-gray-800 hover:bg-gray-700 text-white"}`}>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* Details drawer */}
-        {selected && (
-          <div className="fixed inset-0 z-40 flex">
-            <div className="flex-1 bg-black/40" onClick={() => setSelected(null)} />
-
-            <div className="w-full md:w-[520px] bg-gray-900 border-l border-gray-700 p-6 overflow-auto">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-white">Order {selected.id}</h2>
-                  <p className="text-sm text-gray-400">{formatDate(selected.created_at)}</p>
-                </div>
-                <button onClick={() => setSelected(null)} className="text-gray-300 bg-gray-800 px-3 py-1 rounded-md">Close</button>
-              </div>
-
-              <div className="mt-6 space-y-4">
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                  <h4 className="text-sm text-gray-300 font-medium">Summary</h4>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-sm text-gray-400">Items</div>
-                    <div className="text-sm text-white font-medium">{selected.items_count}</div>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <div className="text-sm text-gray-400">Shipping</div>
-                    <div className="text-sm text-white">{selected.shipping || "Standard"}</div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                  <h4 className="text-sm text-gray-300 font-medium">Items</h4>
-                  <ul className="mt-2 space-y-2">
-                    {selected.items && selected.items.length ? selected.items.map((it, idx) => (
-                      <li key={idx} className="flex items-center justify-between text-sm text-gray-200">
-                        <div>
-                          <div className="font-medium">{it.name}</div>
-                          <div className="text-xs text-gray-400">Qty: {it.qty}</div>
-                        </div>
-                        <div className="text-sm text-gray-300">${(it.price * it.qty).toFixed(2)}</div>
-                      </li>
-                    )) : <li className="text-sm text-gray-400">No item details available.</li>}
-                  </ul>
-                </div>
-
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-gray-400">Order total</div>
-                    <div className="text-xl font-bold text-white">${Number(selected.total).toFixed(2)}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-400 text-right">Status</div>
-                    <div className={`mt-1 px-3 py-1 rounded-full text-sm font-medium ${STATUS_LABELS[selected.status]?.style || "bg-gray-700 text-gray-200"}`}>{STATUS_LABELS[selected.status]?.label || selected.status}</div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  {selected.can_reorder && <button onClick={() => { reorder(selected.id); setSelected(null); }} className="flex-1 px-4 py-2 rounded-md bg-emerald-600 text-white">Reorder</button>}
-                  {selected.can_cancel && <button onClick={() => { cancelOrder(selected.id); setSelected(null); }} className="flex-1 px-4 py-2 rounded-md bg-rose-600 text-white">Cancel Order</button>}
-                  <button onClick={() => trackOrder(selected)} className="flex-1 px-4 py-2 rounded-md border border-gray-700 text-gray-200">Track</button>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
 
-        {/* toast */}
-        {toast.message && (
-          <div className="fixed bottom-6 right-6 bg-gray-800 border border-gray-700 px-4 py-3 rounded-lg shadow-lg">
-            <div className="text-sm text-white">
-              <strong className="block mb-1">{toast.type === "success" ? "Success" : toast.type === "error" ? "Error" : "Info"}</strong>
-              <span>{toast.message}</span>
+        {/* Pagination */}
+        {filtered.length > 0 && (
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-sm text-slate-600">
+              Showing <strong className="text-slate-900">{filtered.length}</strong> results — Page <strong className="text-slate-900">{page}</strong> of <strong className="text-slate-900">{totalPages}</strong>
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button onClick={handlePrev} disabled={page === 1} className={`p-2 rounded-lg ${page === 1 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-white border border-slate-300 hover:bg-slate-50 text-slate-700"} transition-colors`}>
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button onClick={handleNext} disabled={page === totalPages} className={`p-2 rounded-lg ${page === totalPages ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-white border border-slate-300 hover:bg-slate-50 text-slate-700"} transition-colors`}>
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
           </div>
         )}
       </div>
-        <div className="h-16" >
-              <Footer />
+
+      {/* Details Modal */}
+      {selected && (
+        <div className="fixed inset-0 z-40 flex">
+          <div className="flex-1 bg-black/30 backdrop-blur-sm" onClick={() => setSelected(null)} />
+
+          <div className="w-full md:w-[520px] bg-white border-l border-slate-200 p-6 overflow-auto shadow-2xl">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Order {selected.id}</h2>
+                <p className="text-sm text-slate-500 mt-1">{formatDate(selected.created_at)}</p>
+              </div>
+              <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-slate-700 bg-slate-100 px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+                Close
+              </button>
             </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">Summary</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Items</span>
+                    <span className="font-medium text-slate-900">{selected.items_count}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Shipping</span>
+                    <span className="font-medium text-slate-900">{selected.shipping}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">Items</h4>
+                <ul className="space-y-2">
+                  {selected.items?.map((it, idx) => (
+                    <li key={idx} className="flex justify-between text-sm">
+                      <div>
+                        <p className="font-medium text-slate-900">{it.name}</p>
+                        <p className="text-xs text-slate-500">Qty: {it.qty}</p>
+                      </div>
+                      <p className="font-medium text-slate-900">${(it.price * it.qty).toFixed(2)}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-slate-600">Order Total</p>
+                  <p className="text-2xl font-bold text-slate-900">${Number(selected.total).toFixed(2)}</p>
+                </div>
+                <span className={`px-4 py-2 rounded-full text-sm font-medium ${STATUS_LABELS[selected.status]?.style}`}>
+                  {STATUS_LABELS[selected.status]?.label}
+                </span>
+              </div>
+
+              <div className="flex gap-3">
+                {selected.can_reorder && (
+                  <button onClick={() => { reorder(selected.id); setSelected(null); }} className="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors">
+                    Reorder
+                  </button>
+                )}
+                {selected.can_cancel && (
+                  <button onClick={() => { cancelOrder(selected.id); setSelected(null); }} className="flex-1 px-4 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors">
+                    Cancel
+                  </button>
+                )}
+                <button onClick={() => trackOrder(selected)} className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium transition-colors">
+                  Track
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast.message && (
+        <div className={`fixed bottom-6 right-6 px-5 py-4 rounded-lg shadow-xl border ${
+          toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
+          toast.type === "error" ? "bg-rose-50 border-rose-200 text-rose-800" :
+          "bg-blue-50 border-blue-200 text-blue-800"
+        } z-50`}>
+          <p className="font-semibold text-sm">{toast.message}</p>
+        </div>
+      )}
+
+      <div className="h-16">
+        <Footer />
+      </div>
     </main>
   );
 }

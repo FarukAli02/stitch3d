@@ -1,139 +1,170 @@
 "use client";
+
 import { useRouter } from "next/navigation";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import React from "react";
+import Link from "next/link";
+
 const SignupSchema = Yup.object().shape({
   firstName: Yup.string().trim().required("First name is required"),
   lastName: Yup.string().trim().required("Last name is required"),
   email: Yup.string()
-    .email("Enter a valid email address")
-    .matches(/^[^\s@]+@[^\s@]+\.(com|pk|org|uk)$/i, "Email must end with .com, .pk, .org, or .uk")
+    .email("Enter a valid email")
+    .matches(
+      /^[^\s@]+@[^\s@]+\.(com|pk|org|uk)$/i,
+      "Email must end with .com, .pk, .org, or .uk"
+    )
     .required("Email is required"),
-  password: Yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
+  password: Yup.string()
+    .min(6, "Password must be at least 6 characters")
+    .required("Password is required"),
 });
+
 export default function Signup() {
   const router = useRouter();
+
   async function handleSignup(values, { setSubmitting, setStatus }) {
-    setStatus({ message: "Creating account...", type: "info" });
+    setStatus({ message: "Creating your account...", type: "info" });
+
     try {
+      // Only send four fields: firstName, lastName, email, password
       const res = await fetch("http://localhost:5000/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
       const data = await res.json();
+
       if (!res.ok) {
-        setStatus({ message: `❌ ${data.message || "Signup failed. Try again."}`, type: "error" });
+        setStatus({ message: data.message || "Signup failed", type: "error" });
         setSubmitting(false);
         return;
       }
-      setStatus({ message: "✅ Account created! Check your email for a verification code.", type: "success" });
-      setTimeout(() => router.push(`/verify?email=${values.email}`), 1500);
+
+      setStatus({ message: "Account created! Check your email.", type: "success" });
+      setTimeout(() => router.push(`/verify?email=${values.email}`), 1200);
     } catch (err) {
-      console.error(err);
-      setStatus({ message: "❌ Something went wrong. Please try again.", type: "error" });
+      setStatus({ message: "Connection error. Try again.", type: "error" });
       setSubmitting(false);
     }
   }
+
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-100 p-4">
-      <div className="w-full max-w-md bg-gray-900 border border-gray-800 shadow-2xl shadow-indigo-900/20 rounded-xl p-6 sm:p-8 transition-all duration-300">
-        <h1 className="text-3xl font-extrabold text-center text-white mb-2 tracking-tight">
-          Create Your Stitch<span className="text-indigo-400">3D</span> Account
-        </h1>
-        <p className="text-sm text-gray-400 text-center mb-6">
-          Sign up to start customizing your leather jackets.
-        </p>
-        <Formik
-          initialValues={{
-            firstName: "",
-            lastName: "",
-            email: "",
-            password: "",
-          }}
-          validationSchema={SignupSchema}
-          onSubmit={handleSignup}
-        >
-          {({ isSubmitting, status }) => (
-            <Form className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Field
-                    name="firstName"
-                    placeholder="First Name"
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 focus:outline-none"
-                  />
-                  <ErrorMessage name="firstName">
-                    {(msg) => <div className="mt-2 text-xs text-rose-300">{msg}</div>}
-                  </ErrorMessage>
-                </div>
-                <div>
-                  <Field
-                    name="lastName"
-                    placeholder="Last Name"
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 focus:outline-none"
-                  />
-                  <ErrorMessage name="lastName">
-                    {(msg) => <div className="mt-2 text-xs text-rose-300">{msg}</div>}
-                  </ErrorMessage>
-                </div>
-              </div>
-              <div>
-                <Field
-                  name="email"
-                  type="email"
-                  placeholder="Email address"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 focus:outline-none"
-                />
-                <ErrorMessage name="email">
-                  {(msg) => <div className="mt-2 text-xs text-rose-300">{msg}</div>}
-                </ErrorMessage>
-              </div>
-              <div>
-                <Field
-                  type="password"
-                  name="password"
-                  placeholder="Password (min 6 chars)"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 focus:outline-none"
-                />
-                <ErrorMessage name="password">
-                  {(msg) => <div className="mt-2 text-xs text-rose-300">{msg}</div>}
-                </ErrorMessage>
-              </div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base shadow-lg shadow-indigo-600/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
-              >
-                {isSubmitting ? "Creating..." : "Create Account"}
-              </button>
-              {status && status.message && (
-                <div
-                  className={`mt-5 text-center text-sm p-4 rounded-lg font-medium transition-colors ${
-                    status.type === "success"
-                      ? "bg-green-900/30 text-green-300 border border-green-800"
-                      : status.type === "error"
-                      ? "bg-rose-900/30 text-rose-300 border border-rose-800"
-                      : "bg-gray-800 text-gray-300 border border-gray-700"
-                  }`}
-                >
-                  {status.message}
-                </div>
-              )}
-            </Form>
-          )}
-        </Formik>
-        <p className="text-center text-sm mt-6 text-gray-400">
-          Already have an account?{" "}
-          <a
-            href="/login"
-            className="text-indigo-400 hover:text-indigo-300 font-semibold hover:underline transition-colors"
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4 py-10">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">Create Account</h1>
+          <p className="text-slate-600 text-sm">Start designing custom jackets with Stitch3D</p>
+        </div>
+
+        {/* Form */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-xl shadow-slate-200/60">
+          <Formik
+            initialValues={{
+              firstName: "",
+              lastName: "",
+              email: "",
+              password: "",
+            }}
+            validationSchema={SignupSchema}
+            onSubmit={handleSignup}
           >
-            Login
-          </a>
-        </p>
+            {({ isSubmitting, status }) => (
+              <Form className="space-y-5">
+                {/* Name Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">First Name</label>
+                    <Field
+                      name="firstName"
+                      placeholder="firstname"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                    <ErrorMessage name="firstName">
+                      {(msg) => <div className="mt-1 text-xs text-rose-600">{msg}</div>}
+                    </ErrorMessage>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Last Name</label>
+                    <Field
+                      name="lastName"
+                      placeholder="lastname"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                    <ErrorMessage name="lastName">
+                      {(msg) => <div className="mt-1 text-xs text-rose-600">{msg}</div>}
+                    </ErrorMessage>
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
+                  <Field
+                    name="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  />
+                  <ErrorMessage name="email">
+                    {(msg) => <div className="mt-1 text-xs text-rose-600">{msg}</div>}
+                  </ErrorMessage>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
+                  <Field
+                    name="password"
+                    type="password"
+                    placeholder="Min. 6 characters"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  />
+                  <ErrorMessage name="password">
+                    {(msg) => <div className="mt-1 text-xs text-rose-600">{msg}</div>}
+                  </ErrorMessage>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Creating Account..." : "Create Account"}
+                </button>
+
+                {/* Status Message */}
+                {status?.message && (
+                  <div
+                    className={`text-center text-sm py-3 px-4 rounded-lg mt-2 ${
+                      status.type === "success"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : status.type === "error"
+                        ? "bg-rose-50 text-rose-700 border border-rose-200"
+                        : "bg-slate-100 text-slate-700 border border-slate-300"
+                    }`}
+                  >
+                    {status.message}
+                  </div>
+                )}
+              </Form>
+            )}
+          </Formik>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600">
+              Already have an account?{" "}
+              <Link href="/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                Log in
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

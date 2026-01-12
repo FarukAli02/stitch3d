@@ -1,19 +1,45 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import ThemeToggle from './ThemeToggle';
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [logoPath, setLogoPath] = useState(''); // State to hold the logo URL
+
+  // Fetch the logo from the backend when the Navbar loads
+  useEffect(() => {
+    // Make sure 'http://localhost:5000' matches your Backend Port!
+    fetch('http://localhost:5000/api/site-logo')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.logoUrl) {
+          setLogoPath(data.logoUrl); // Updates state with the path from MySQL
+        }
+      })
+      .catch((err) => console.error("Failed to load site logo:", err));
+  }, []);
 
   return (
-
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-4">
-          <div className="text-2xl font-bold font-serif text-gray-900" data-testid="text-logo">
-            Stitch3D
+          
+          {/* LOGO SECTION START */}
+          <div className="flex items-center" data-testid="logo-container">
+            {logoPath ? (
+              // If we found a logo in the DB, show it
+              <img 
+                src={`http://localhost:3000${logoPath}`} // Forces it to look in frontend public folder
+                alt="Stitch 3D Logo" 
+                className="h-10 w-auto object-contain" // Tailwind classes for sizing
+              />
+            ) : (
+              // Fallback: If no logo yet, show the text title
+              <div className="text-2xl font-bold font-serif text-gray-900" data-testid="text-logo">
+                Stitch 3D
+              </div>
+            )}
           </div>
+          {/* LOGO SECTION END */}
 
           <div className="hidden md:flex items-center gap-8">
             <a href="#home" className="text-gray-900 hover:text-gray-600 px-3 py-2 rounded-md transition-colors" data-testid="link-home">
@@ -34,12 +60,12 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:block">
-    <Link href="/login">
-        <button className="px-6 py-2 bg-amber-700 text-white rounded-md hover:bg-amber-800 transition-colors" data-testid="button-start-designing">
-            Login
-        </button>
-    </Link>
-</div>
+            <Link href="/login">
+              <button className="px-6 py-2 bg-amber-700 text-white rounded-md hover:bg-amber-800 transition-colors" data-testid="button-start-designing">
+                Login
+              </button>
+            </Link>
+          </div>
 
           <button
             className="md:hidden p-2 rounded-md hover:bg-gray-100"
