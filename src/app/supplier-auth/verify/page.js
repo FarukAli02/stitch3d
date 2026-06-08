@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, RefreshCw, MailOpen } from "lucide-react";
@@ -55,7 +55,7 @@ function OtpBoxes({ value, onChange }) {
   );
 }
 
-export default function SupplierVerifyEmail() {
+function SupplierVerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -197,5 +197,13 @@ export default function SupplierVerifyEmail() {
         )}
       </Formik>
     </B2BAuthLayout>
+  );
+}
+
+export default function SupplierVerifyEmail() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading...</div>}>
+      <SupplierVerifyEmailContent />
+    </Suspense>
   );
 }

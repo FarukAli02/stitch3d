@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Field, Form, Formik, ErrorMessage } from "formik";
@@ -12,7 +12,7 @@ import B2BAuthLayout from "../../components/B2BAuthLayout";
  * @description Vendor Email Verification - Simplified Text.
  */
 
-export default function VendorVerifyEmail() {
+function VendorVerifyEmailContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get("email");
@@ -162,5 +162,13 @@ export default function VendorVerifyEmail() {
                 )}
             </Formik>
         </B2BAuthLayout>
+    );
+}
+
+export default function VendorVerifyEmail() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading...</div>}>
+            <VendorVerifyEmailContent />
+        </Suspense>
     );
 }

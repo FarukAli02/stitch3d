@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthLayout from "../../components/AuthLayout";
@@ -23,7 +23,7 @@ const ResetPasswordSchema = Yup.object().shape({
     .required("Confirm password is required"),
 });
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const params = useSearchParams();
   const emailFromQuery = params?.get("email") ?? "";
@@ -214,5 +214,13 @@ export default function ResetPasswordPage() {
         )}
       </Formik>
     </AuthLayout>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

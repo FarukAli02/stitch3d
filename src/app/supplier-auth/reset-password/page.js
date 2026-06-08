@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Field, Form, Formik, ErrorMessage } from "formik";
@@ -19,7 +19,7 @@ const ResetSchema = Yup.object().shape({
     confirmPassword: Yup.string().oneOf([Yup.ref('newPassword'), null], "Doesn't match").required("Required"),
 });
 
-export default function SupplierResetPassword() {
+function SupplierResetPasswordContent() {
     const router = useRouter();
     const params = useSearchParams();
     const emailFromQuery = params?.get("email") ?? "";
@@ -113,5 +113,13 @@ export default function SupplierResetPassword() {
                 )}
             </Formik>
         </B2BAuthLayout>
+    );
+}
+
+export default function SupplierResetPassword() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading...</div>}>
+            <SupplierResetPasswordContent />
+        </Suspense>
     );
 }

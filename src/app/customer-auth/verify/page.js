@@ -1,6 +1,6 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import Link from "next/link";
@@ -20,7 +20,7 @@ const VerifySchema = Yup.object().shape({
     .required("Verification code is required"),
 });
 
-export default function Verify() {
+function VerifyContent() {
   const router = useRouter();
   const email = useSearchParams()?.get("email") || "";
   const [message, setMessage] = useState("");
@@ -159,5 +159,13 @@ export default function Verify() {
         )}
       </Formik>
     </AuthLayout>
+  );
+}
+
+export default function Verify() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading...</div>}>
+      <VerifyContent />
+    </Suspense>
   );
 }
