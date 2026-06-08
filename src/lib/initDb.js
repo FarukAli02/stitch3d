@@ -250,6 +250,7 @@ async function run() {
         name VARCHAR(255),
         color VARCHAR(50),
         material VARCHAR(100),
+        size VARCHAR(50),
         views LONGTEXT,
         snapshots LONGTEXT,
         preview LONGTEXT,
@@ -260,6 +261,7 @@ async function run() {
     // Self-healing patches for dev DB
     try { await db.query('ALTER TABLE customized_designs ADD COLUMN user_id INT;'); } catch (e) { }
     try { await db.query('ALTER TABLE customized_designs ADD COLUMN material VARCHAR(100);'); } catch (e) { }
+    try { await db.query('ALTER TABLE customized_designs ADD COLUMN size VARCHAR(50);'); } catch (e) { }
     try { await db.query("ALTER TABLE customized_designs ADD COLUMN status VARCHAR(50) DEFAULT 'Pending';"); } catch (e) { }
     try { await db.query('ALTER TABLE customized_designs ADD COLUMN snapshots LONGTEXT;'); } catch (e) { }
     try { await db.query('ALTER TABLE customers ADD COLUMN payment_card_last4 VARCHAR(4);'); } catch (e) { }
