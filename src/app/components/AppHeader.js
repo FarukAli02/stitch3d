@@ -21,7 +21,7 @@ import {
   MessageSquare,
   ChevronDown,
 } from "lucide-react";
-import UserAvatarMenu from "./UserAvatar";
+import UserAvatarMenu from "./AppUserAvatar";
 import NotificationBell from "./NotificationBell";
 
 /**

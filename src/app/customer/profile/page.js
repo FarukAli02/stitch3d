@@ -19,8 +19,8 @@ import {
   Phone,
   Camera
 } from "lucide-react";
-import Footer from '@/app/components/Footer';
-import UserAvatarMenu from '@/app/components/UserAvatar';
+import Footer from '@/app/components/AppFooter';
+import UserAvatarMenu from '@/app/components/AppUserAvatar';
 import Logo from '@/app/components/Logo';
 import AccountLayout from "../components/AccountLayout";
 

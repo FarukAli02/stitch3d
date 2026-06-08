@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import ConfirmationModal from "@/app/components/ConfirmationModal";
-import Footer from "@/app/components/Footer";
+import Footer from "@/app/components/AppFooter";
 import { useCart } from "@/app/context/CartContext";
 import { ToastProvider } from "@/app/context/ToastContext";
 

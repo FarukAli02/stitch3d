@@ -3,8 +3,8 @@
 import Logo from '@/app/components/Logo';
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Footer from '@/app/components/Footer';
-import Header from '@/app/components/Header';
+import Footer from '@/app/components/AppFooter';
+import Header from '@/app/components/AppHeader';
 import {
   Eye,
   Search,

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Eye, X, Scissors, Layers, ArrowLeft } from "lucide-react";
-import UserAvatar from "@/app/components/UserAvatar";
+import UserAvatar from "@/app/components/AppUserAvatar";
 
 export default function TrendingPage() {
   const router = useRouter();

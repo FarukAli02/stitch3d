@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Truck, CheckCircle, AlertCircle, CreditCard, Banknote } from "lucide-react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import Footer from '@/app/components/Footer';
+import Footer from '@/app/components/AppFooter';
 import { useCart } from "@/app/context/CartContext";
 import ConfirmationModal from "@/app/components/ConfirmationModal";
 import Input from "@/app/components/ui/Input";

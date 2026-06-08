@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import ConfirmationModal from "@/app/components/ConfirmationModal";
 import Logo from '@/app/components/Logo';
-import Footer from '@/app/components/Footer';
+import Footer from '@/app/components/AppFooter';
 import AccountLayout from "../components/AccountLayout";
 
 /**
