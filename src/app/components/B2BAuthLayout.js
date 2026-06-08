@@ -15,7 +15,7 @@ export default function B2BAuthLayout({ children, title, subtitle, heroTitle, he
     <div className="min-h-screen w-full flex bg-slate-50 text-slate-900 font-sans selection:bg-[#F97316] selection:text-white">
       {/* Absolute Home Link */}
       <div className="absolute top-8 left-8 z-50">
-        <Link href="/home" className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#F97316] transition-all group">
+        <Link href="/" className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#F97316] transition-all group">
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           Back to Site
         </Link>

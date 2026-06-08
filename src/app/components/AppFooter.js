@@ -19,7 +19,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           {/* Brand Column */}
           <div className="space-y-6">
-            <Link href="/home" className="inline-block transition-transform hover:scale-105 duration-300">
+            <Link href="/" className="inline-block transition-transform hover:scale-105 duration-300">
               <div className="flex items-center gap-2 group">
                 <div className="w-8 h-8 flex items-center justify-center bg-[#1E293B] rounded-lg overflow-hidden shadow-sm group-hover:shadow-orange-500/20 transition-all">
                   <span className="text-white font-black text-sm italic tracking-tighter">S</span>

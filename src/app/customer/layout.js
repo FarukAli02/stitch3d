@@ -135,7 +135,7 @@ export default function CustomerLayout({ children }) {
                             >
                                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                             </button>
-                            <Link href="/home" className="flex items-center gap-2 group">
+                            <Link href="/" className="flex items-center gap-2 group">
                                 <div className="relative w-9 h-9 flex items-center justify-center bg-[#1E293B] rounded-xl overflow-hidden shadow-lg group-hover:shadow-orange-500/20 transition-all">
                                     <div className="absolute inset-0 bg-gradient-to-br from-[#F97316] to-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                     <span className="relative z-10 text-white font-black text-lg italic tracking-tighter">S</span>
@@ -255,7 +255,7 @@ export default function CustomerLayout({ children }) {
                             >
                                 <div className="w-72 bg-white h-full shadow-2xl p-6 flex flex-col relative z-50">
                                     <div className="flex justify-between items-center mb-10">
-                                        <Link href="/home" className="flex items-center gap-2 group">
+                                        <Link href="/" className="flex items-center gap-2 group">
                                             <div className="relative w-8 h-8 flex items-center justify-center bg-[#1E293B] rounded-xl overflow-hidden">
                                                 <span className="text-white font-black text-sm italic tracking-tighter">S</span>
                                             </div>

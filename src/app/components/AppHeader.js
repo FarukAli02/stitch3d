@@ -183,7 +183,7 @@ export default function Header() {
             transition={{ duration: 0.5 }}
             className="flex items-center gap-4"
           >
-            <Link href="/home" className="flex items-center gap-2 group">
+            <Link href="/" className="flex items-center gap-2 group">
               <div className="relative w-10 h-10 flex items-center justify-center bg-[#1E293B] rounded-xl overflow-hidden shadow-lg group-hover:shadow-orange-500/20 transition-all">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#F97316] to-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <span className="relative z-10 text-white font-black text-xl italic tracking-tighter">S</span>

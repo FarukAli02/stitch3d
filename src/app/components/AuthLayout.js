@@ -19,7 +19,7 @@ export default function AuthLayout({ children, title, subtitle, heroTitle, heroS
             {/* Link to Home - Absolute */}
             <div className="absolute top-6 left-6 z-20">
                 <Link
-                    href="/home"
+                    href="/"
                     className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[#F97316] transition-colors"
                 >
                     <ArrowLeft size={18} />
