@@ -1,75 +1,116 @@
+"use client";
+import React from "react";
+import Link from "next/link";
+import { Facebook, Twitter, Instagram, Linkedin, Mail } from "lucide-react";
+import Logo from './Logo';
+
+/**
+ * @file Footer.js
+ * @description Global Footer component.
+ * Contains site links, social media icons, and copyright info.
+ */
+
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer id="contact" className="bg-white border-t border-gray-200">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          <div>
-            <h3 className="text-xl font-bold font-serif mb-4" data-testid="text-footer-company">
-              Stitch3D
-            </h3>
-            <p className="text-gray-600 mb-4" data-testid="text-footer-tagline">
-              Premium handcrafted leather jackets tailored to perfection since 2025.
+    <footer className="bg-white border-t border-slate-100 pt-16 pb-12">
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+          {/* Brand Column */}
+          <div className="space-y-6">
+            <Link href="/home" className="inline-block transition-transform hover:scale-105 duration-300">
+              <div className="flex items-center gap-2 group">
+                <div className="w-8 h-8 flex items-center justify-center bg-[#1E293B] rounded-lg overflow-hidden shadow-sm group-hover:shadow-orange-500/20 transition-all">
+                  <span className="text-white font-black text-sm italic tracking-tighter">S</span>
+                </div>
+                <div className="text-lg font-black tracking-tighter flex items-center gap-0.5">
+                  <span className="text-[#1E293B]">Stitch</span>
+                </div>
+              </div>
+            </Link>
+            <p className="text-[var(--text-secondary)] text-sm leading-relaxed max-w-xs">
+              The leading platform for fashion design and manufacturing.
+              Bring your creativity to life with professional-grade tools.
             </p>
+            <div className="flex items-center gap-3 pt-2">
+              <SocialLink href="#" icon={Twitter} />
+              <SocialLink href="#" icon={Facebook} />
+              <SocialLink href="#" icon={Instagram} />
+              <SocialLink href="#" icon={Linkedin} />
+            </div>
           </div>
 
+          {/* Links Column 1 */}
           <div>
-            <h4 className="font-semibold mb-4" data-testid="text-footer-quick-links">Quick Links</h4>
-            <ul className="space-y-2">
-              <li>
-                <a href="#home" className="text-gray-600 hover:text-gray-900 transition-colors" data-testid="link-footer-home">
-                  Home
-                </a>
-              </li>
-              <li>
-                <a href="#gallery" className="text-gray-600 hover:text-gray-900 transition-colors" data-testid="link-footer-gallery">
-                  Gallery
-                </a>
-              </li>
-              <li>
-                <a href="#customize" className="text-gray-600 hover:text-gray-900 transition-colors" data-testid="link-footer-customize">
-                  Customize
-                </a>
-              </li>
-              <li>
-                <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors" data-testid="link-footer-about">
-                  About Us
-                </a>
-              </li>
+            <h4 className="font-bold text-[var(--text-primary)] mb-6 uppercase tracking-wider text-xs">Company</h4>
+            <ul className="space-y-3">
+              <FooterLink href="#">About Us</FooterLink>
+              <FooterLink href="#">Careers</FooterLink>
+              <FooterLink href="#">Press & Media</FooterLink>
+              <FooterLink href="/customer/support">Contact Support</FooterLink>
             </ul>
           </div>
 
+          {/* Links Column 2 */}
           <div>
-            <h4 className="font-semibold mb-4" data-testid="text-footer-contact">Contact Us</h4>
+            <h4 className="font-bold text-[var(--text-primary)] mb-6 uppercase tracking-wider text-xs">Resources</h4>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-gray-600">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span data-testid="text-footer-address">Szabist 100</span>
-              </li>
-              <li className="flex items-center gap-2 text-gray-600">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                <span data-testid="text-footer-phone">021 345678908</span>
-              </li>
-              <li className="flex items-center gap-2 text-gray-600">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span data-testid="text-footer-email">info@Stitch3D.com</span>
-              </li>
+              <FooterLink href="#">Blog</FooterLink>
+              <FooterLink href="#">Documentation</FooterLink>
+              <FooterLink href="#">Community</FooterLink>
+              <FooterLink href="#">Design Academy</FooterLink>
+            </ul>
+          </div>
+
+          {/* Links Column 3 */}
+          <div>
+            <h4 className="font-bold text-[var(--text-primary)] mb-6 uppercase tracking-wider text-xs">Legal</h4>
+            <ul className="space-y-3">
+              <FooterLink href="#">Privacy Policy</FooterLink>
+              <FooterLink href="#">Terms of Service</FooterLink>
+              <FooterLink href="#">Cookie Policy</FooterLink>
+              <FooterLink href="#">Acceptable Use</FooterLink>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-8 text-center text-gray-600">
-          <p data-testid="text-footer-copyright">
-            &copy; 2025 Stitch3D. All rights reserved.
+        <div className="border-t border-slate-50 pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest">
+            © {currentYear} Stitch Commerce, Inc. Crafted with excellence.
           </p>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse"></span>
+              All systems operational
+            </div>
+          </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterLink({ href, children }) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className="text-[var(--text-secondary)] hover:text-[var(--color-accent-orange)] transition-all text-sm font-medium hover:pl-1"
+      >
+        {children}
+      </Link>
+    </li>
+  );
+}
+
+function SocialLink({ href, icon: Icon }) {
+  return (
+    <a
+      href={href}
+      className="w-9 h-9 rounded-xl bg-[var(--bg-accent)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--color-accent-orange)] hover:text-white transition-all transform hover:-translate-y-1 shadow-sm"
+    >
+      <Icon className="w-4 h-4" />
+    </a>
   );
 }

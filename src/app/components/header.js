@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCart } from "../context/CartContext";
 import {
   ShoppingCart,
   Sun,
@@ -20,13 +21,22 @@ import {
   MessageSquare,
   ChevronDown,
 } from "lucide-react";
+import UserAvatarMenu from "./UserAvatar";
+import NotificationBell from "./NotificationBell";
+
+/**
+ * @file Header.js
+ * @description Main Navigation Header.
+ * Adapts to user role (Customer, Vendor, Admin) and handles mobile menu, profile dropdown, and cart count.
+ * Fetches user profile on mount to display name/avatar.
+ */
 
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  
+
   // State management
-  const [cartCount, setCartCount] = useState(0);
+  const { cartCount } = useCart(); // Use Global Cart State
   const [notificationCount, setNotificationCount] = useState(3);
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -34,7 +44,7 @@ export default function Header() {
   const [profile, setProfile] = useState(null);
   const [userRole, setUserRole] = useState("customer");
   const [loading, setLoading] = useState(true);
-  
+
   // Refs
   const menuRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -43,8 +53,8 @@ export default function Header() {
   const navLinks = {
     customer: [
       { name: "Dashboard", href: "/customer/dashboard", icon: Home },
-      { name: "Customize", href: "/customize", icon: Shirt },
-      { name: "Shop", href: "/shop", icon: ShoppingCart },
+      { name: "Customize", href: "/customer/customize", icon: Shirt },
+      { name: "Shop", href: "/customer/shop", icon: ShoppingCart },
       { name: "Saved Designs", href: "/customer/designs", icon: Heart },
       { name: "Messages", href: "/customer/messages", icon: MessageSquare },
     ],
@@ -52,20 +62,21 @@ export default function Header() {
       { name: "Dashboard", href: "/vendor/dashboard", icon: Home },
       { name: "Products", href: "/vendor/products", icon: Shirt },
       { name: "Orders", href: "/vendor/orders", icon: ShoppingCart },
-      { name: "Analytics", href: "/vendor/analytics", icon: Heart },
-      { name: "Messages", href: "/vendor/messages", icon: MessageSquare },
+      { name: "Settings", href: "/vendor/settings", icon: Settings },
+      // { name: "Analytics", href: "/vendor/analytics", icon: Heart }, // Coming Soon
+      // { name: "Messages", href: "/vendor/messages", icon: MessageSquare }, // Coming Soon
     ],
     supplier: [
-      { name: "Dashboard", href: "/supplier/dashboard", icon: Home },
-      { name: "Materials", href: "/supplier/materials", icon: Shirt },
-      { name: "Requests", href: "/supplier/requests", icon: ShoppingCart },
-      { name: "Orders", href: "/supplier/orders", icon: Heart },
+      { name: "Dashboard", href: "#", icon: Home }, // Coming Soon
+      { name: "Materials", href: "#", icon: Shirt },
+      { name: "Requests", href: "#", icon: ShoppingCart },
+      { name: "Orders", href: "#", icon: Heart },
     ],
     admin: [
       { name: "Dashboard", href: "/admin/dashboard", icon: Home },
       { name: "Users", href: "/admin/users", icon: User },
       { name: "Vendors", href: "/admin/vendors", icon: Shirt },
-      { name: "Reports", href: "/admin/reports", icon: Heart },
+      { name: "Reports", href: "#", icon: Heart }, // Coming Soon
     ],
   };
 
@@ -84,7 +95,7 @@ export default function Header() {
   // Fetch user profile
   const fetchProfile = async (token) => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/profile", {
+      const response = await fetch("/api/auth/profile", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -98,6 +109,7 @@ export default function Header() {
           firstName: data.first_name || data.firstName || "",
           lastName: data.last_name || data.lastName || "",
           email: data.email || "",
+          profileImage: data.profile_image || null,
         });
       } else {
         localStorage.removeItem("token");
@@ -108,23 +120,6 @@ export default function Header() {
       setLoading(false);
     }
   };
-  // Load cart count
-  useEffect(() => {
-    const loadCart = () => {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const count = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-      setCartCount(count);
-    };
-    loadCart();
-    // Listen for cart updates
-    const handleCartUpdate = () => loadCart();
-    window.addEventListener("cartUpdated", handleCartUpdate);
-    window.addEventListener("storage", handleCartUpdate);
-    return () => {
-      window.removeEventListener("cartUpdated", handleCartUpdate);
-      window.removeEventListener("storage", handleCartUpdate);
-    };
-  }, []);
   // Close menus on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -143,9 +138,10 @@ export default function Header() {
   // Handle logout
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:5000/api/auth/logout", {
+      await fetch("/api/auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
     } catch (error) {
       console.warn("Logout network error:", error);
@@ -153,7 +149,7 @@ export default function Header() {
       localStorage.removeItem("token");
       localStorage.removeItem("userRole");
       setProfile(null);
-      router.replace("/login");
+      router.replace("/customer-auth/login");
     }
   };
 
@@ -185,18 +181,35 @@ export default function Header() {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
+            className="flex items-center gap-4"
           >
-            <Link href={`/${userRole}/dashboard`} className="flex items-center gap-2 group">
-              <div className="text-2xl font-black tracking-tighter">
-                <span className="text-gray-900">Stitch</span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                  3D
-                </span>
+            <Link href="/home" className="flex items-center gap-2 group">
+              <div className="relative w-10 h-10 flex items-center justify-center bg-[#1E293B] rounded-xl overflow-hidden shadow-lg group-hover:shadow-orange-500/20 transition-all">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#F97316] to-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <span className="relative z-10 text-white font-black text-xl italic tracking-tighter">S</span>
+                <div className="absolute bottom-0 right-0 w-4 h-4 bg-white/20 backdrop-blur-sm rounded-tl-lg" />
               </div>
-              <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition">
-                {userRole}
-              </span>
+              <div className="flex flex-col">
+                <div className="text-xl font-black tracking-tighter flex items-center gap-0.5">
+                  <span className="text-[#1E293B]">Stitch</span>
+                </div>
+                <div className="h-0.5 w-0 bg-[#F97316] group-hover:w-full transition-all duration-500" />
+              </div>
             </Link>
+
+            {profile && (
+              <div className="hidden sm:block h-8 w-px bg-slate-200 mx-2" />
+            )}
+
+            {profile && (
+              <Link 
+                href={`/${userRole}/dashboard`}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-orange-50 text-slate-500 hover:text-[#F97316] rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-transparent hover:border-orange-100 shadow-sm"
+              >
+                <Home size={14} />
+                Dashboard
+              </Link>
+            )}
           </motion.div>
 
           {/* Desktop Navigation */}
@@ -205,11 +218,10 @@ export default function Header() {
               <Link
                 key={href}
                 href={href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
-                  isActive(href)
-                    ? "bg-indigo-50 text-indigo-600"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${isActive(href)
+                  ? "bg-indigo-50 text-indigo-600"
+                  : "text-gray-700 hover:bg-gray-50"
+                  }`}
               >
                 <Icon size={16} />
                 {name}
@@ -242,25 +254,10 @@ export default function Header() {
             </div>
 
             {/* Notifications */}
-            {userRole !== "supplier" && (
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative p-2 rounded-xl hover:bg-gray-100 transition"
-                aria-label="Notifications"
-              >
-                <Bell size={20} className="text-gray-600" />
-                {notificationCount > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
-                  >
-                    {notificationCount}
-                  </motion.span>
-                )}
-              </motion.button>
-            )}
+            <NotificationBell 
+                role={userRole} 
+                tokenKey={userRole === 'customer' ? 'token' : userRole === 'vendor' ? 'vendorToken' : userRole === 'admin' ? 'adminToken' : 'supplierToken'} 
+            />
 
             {/* Shopping Cart (Customer only) */}
             {userRole === "customer" && (
@@ -301,63 +298,14 @@ export default function Header() {
             </motion.button>
 
             {/* Profile Menu (Desktop) */}
-            <div className="hidden sm:block relative" ref={menuRef}>
-              <motion.button
-                onClick={() => setProfileMenuOpen(!isProfileMenuOpen)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg transition font-bold text-sm"
-                aria-label="User menu"
-              >
-                {initials}
-              </motion.button>
-
-              <AnimatePresence>
-                {isProfileMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -12, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -12, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute right-0 mt-3 w-52 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
-                  >
-                    {/* Profile Header */}
-                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {profile?.firstName} {profile?.lastName}
-                      </p>
-                      <p className="text-xs text-gray-500">{profile?.email}</p>
-                    </div>
-
-                    {/* Profile Link */}
-                    <Link
-                      href={`/${userRole}/profile`}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 transition"
-                    >
-                      <User size={16} className="text-indigo-600" />
-                      My Profile
-                    </Link>
-
-                    {/* Settings Link */}
-                    <Link
-                      href={`/${userRole}/settings`}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 transition"
-                    >
-                      <Settings size={16} className="text-gray-600" />
-                      Settings
-                    </Link>
-
-                    {/* Logout Button */}
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition border-t border-gray-100"
-                    >
-                      <LogOut size={16} />
-                      Sign Out
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="hidden sm:block">
+              <UserAvatarMenu
+                initials={initials}
+                profileImage={profile?.profileImage}
+                isOpen={isProfileMenuOpen}
+                onToggle={() => setProfileMenuOpen(!isProfileMenuOpen)}
+                onLogout={handleLogout}
+              />
             </div>
 
             {/* Mobile Menu Button */}
@@ -388,11 +336,10 @@ export default function Header() {
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition ${
-                    isActive(href)
-                      ? "bg-indigo-50 text-indigo-600"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition ${isActive(href)
+                    ? "bg-indigo-50 text-indigo-600"
+                    : "text-gray-700 hover:bg-gray-50"
+                    }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <Icon size={18} />

@@ -1,299 +1,339 @@
+// File: app/customer/dashboard/page.js
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import UserAvatarMenu from "@/app/components/useravatar";
-import Footer from "@/app/components/footer";
 import { motion } from "framer-motion";
-import { ShoppingCart, Sun, ChevronRight } from "lucide-react";
+import {
+  TrendingUp,
+  Package,
+  Clock,
+  Heart,
+  ArrowUpRight,
+  Star,
+  Zap,
+  ChevronRight,
+  ShieldCheck
+} from "lucide-react";
+import { useCart } from "../../context/CartContext";
+import { useToast } from "../../context/ToastContext";
+import Image from "next/image";
 
-export default function DashboardPage() {
+/**
+ * @file page.js
+ * @description Customer Dashboard.
+ * Central hub for customers to view stats, active orders, and trending designs.
+ * Fetches user profile, order stats, and trending products.
+ */
+
+export default function Dashboard() {
   const router = useRouter();
-
-  /* ------------------------------------------------------------------ */
-  /* State                                                              */
-  /* ------------------------------------------------------------------ */
-
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [profile, setProfile] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
-  const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
-
-  const carouselRef = useRef(null);
-
-  /* ------------------------------------------------------------------ */
-  /* Static Data                                                         */
-  /* ------------------------------------------------------------------ */
-
-  const trendingJackets = [
-    {
-      id: 1,
-      title: "Midnight Rider",
-      img: "https://miro.medium.com/v2/resize:fit:600/1*sJGRHxd0Q5wNXsPs4gZRvg.jpeg",
-    },
-    {
-      id: 2,
-      title: "Urban Edge",
-      img: "https://tse1.mm.bing.net/th/id/OIP.VGlLe9KI1ULxY2OG5QXePAHaHa?rs=1&pid=ImgDetMain",
-    },
-    {
-      id: 3,
-      title: "Classic Noir",
-      img: "https://tse2.mm.bing.net/th/id/OIP.XWHyVbqQhjR0BpSWHbCYQwHaJ4?rs=1&pid=ImgDetMain",
-    },
-    {
-      id: 4,
-      title: "Vintage Racer",
-      img: "https://th.bing.com/th/id/OIP.ergNH0eXxWFFcQTm1HTOZgHaHy?pid=ImgDetMain",
-    },
-  ];
-
-  const stats = {
-    totalOrders: 0,
-    activeCustoms: 0,
-    savedDesigns: 0,
-    inProgress: 0,
-  };
-
-  /* ------------------------------------------------------------------ */
-  /* Effects                                                            */
-  /* ------------------------------------------------------------------ */
+  const [firstName, setFirstName] = useState("Designer");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      setLoadingProfile(false);
-      return;
+    if (token) {
+      fetch("/api/auth/profile", {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => res.json()).then(data => {
+        if (data.first_name || data.firstName) setFirstName(data.first_name || data.firstName);
+      }).catch(err => console.error(err));
     }
-
-    (async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/auth/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!res.ok) {
-          localStorage.removeItem("token");
-          setLoadingProfile(false);
-          return;
-        }
-
-        const data = await res.json();
-        setProfile({
-          firstName: data.first_name || data.firstName || "",
-          lastName: data.last_name || data.lastName || "",
-          email: data.email || "",
-        });
-      } catch (err) {
-        console.error("Profile fetch error:", err);
-      } finally {
-        setLoadingProfile(false);
-      }
-    })();
   }, []);
 
-  useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCartCount(cart.reduce((s, i) => s + (i.quantity || 0), 0));
-  }, []);
-
-  /* ------------------------------------------------------------------ */
-  /* Handlers                                                           */
-  /* ------------------------------------------------------------------ */
-
-  const handleLogout = async () => {
-    try {
-      await fetch("http://localhost:5000/api/auth/logout", { method: "POST" });
-    } catch (err) {
-      console.warn("Logout network error:", err);
-    } finally {
-      localStorage.removeItem("token");
-      router.replace("/login");
-    }
-  };
+  /* ===== Context ===== */
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const handleAddToCart = (jacket) => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    addToCart({
+      id: jacket.id,
+      title: jacket.title,
+      img: jacket.img,
+      price: String(jacket.price).replace(/[^\d]/g, ""),
+      quantity: 1,
+    });
 
-    const existingItem = cart.find((item) => item.id === jacket.id);
-
-    if (existingItem) {
-      existingItem.quantity += 1;
-    } else {
-      cart.push({
-        id: jacket.id,
-        title: jacket.title,
-        img: jacket.img,
-        quantity: 1,
-      });
-    }
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-    setCartCount(cart.reduce((s, i) => s + (i.quantity || 0), 0));
+    showToast(`✓ ${jacket.title} added to cart`, "success");
   };
 
-  const initials = profile?.firstName
-    ? profile.firstName[0].toUpperCase()
-    : "N";
+  /* ===== Trending State ===== */
+  const [trendingJackets, setTrendingJackets] = useState([]);
+  const [loadingTrending, setLoadingTrending] = useState(true);
 
-  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    setLoadingTrending(true);
+    fetch('/api/public/products/trending')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setTrendingJackets(data.map(p => ({
+            id: p.id,
+            title: p.name,
+            price: p.price,
+            rating: p.average_rating || 0,
+            reviews: p.total_reviews || 0,
+            trend: "Hot",
+            img: p.image,
+            badge: "Premium"
+          })));
+        }
+      })
+      .catch(e => console.error(e))
+      .finally(() => setLoadingTrending(false));
+  }, []);
 
-  if (loadingProfile) {
-    return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-600">Loading dashboard…</div>
-      </main>
-    );
-  }
+  /* ===== Stats State ===== */
+  const [statsData, setStatsData] = useState({
+    orders: 0,
+    inProgress: 0,
+    savedDesigns: 0,
+    spent: 0
+  });
 
-  const cardHover = {
-    scale: 1.02,
-    y: -4,
-    boxShadow: "0 12px 30px rgba(99,102,241,0.08)",
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const fetchData = async () => {
+      try {
+        const ordersRes = await fetch('/api/customer/orders/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        let ordersCount = 0;
+        let inProgressCount = 0;
+        let totalSpent = 0;
+
+        if (ordersRes.ok) {
+          const orders = await ordersRes.json();
+          if (Array.isArray(orders)) {
+            ordersCount = orders.length;
+            inProgressCount = orders.filter(o => o.status === 'pending' || o.status === 'in_progress').length;
+            totalSpent = orders.reduce((sum, o) => sum + Number(o.total), 0);
+          }
+        }
+
+        const designsRes = await fetch('/api/customer/designs', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        let designsCount = 0;
+        if (designsRes.ok) {
+          const designs = await designsRes.json();
+          if (Array.isArray(designs)) {
+            designsCount = designs.length;
+          }
+        }
+
+        setStatsData({
+          orders: ordersCount,
+          inProgress: inProgressCount,
+          savedDesigns: designsCount,
+          spent: totalSpent
+        });
+
+      } catch (e) {
+        console.error("Dashboard stats fetch error", e);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const stats = [
+    { label: "Total Orders", value: statsData.orders.toString(), icon: Package, growth: "+2%", color: "brand" },
+    { label: "Active Orders", value: statsData.inProgress.toString(), icon: Clock, growth: "on track", color: "blue" },
+    { label: "Saved Designs", value: statsData.savedDesigns.toString(), icon: Heart, growth: "new", color: "rose" },
+    { label: "Total Invested", value: `Rs ${statsData.spent.toLocaleString()}`, icon: ShieldCheck, growth: "+0%", color: "emerald" },
+  ];
+
+  /* ===== Animation Variants ===== */
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
   };
-
-  /* ------------------------------------------------------------------ */
-  /* Render                                                             */
-  /* ------------------------------------------------------------------ */
+  const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.2, 0.65, 0.3, 0.9] } } };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
-          <div
-            className="text-2xl font-extrabold cursor-pointer"
-            onClick={() => router.push("/")}
-          >
-            <span className="text-slate-900">Stitch</span>
-            <span className="text-indigo-600">3D</span>
+    <div className="space-y-8 pb-10">
+      {/* Welcome Banner - More Compact & Refined */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative overflow-hidden rounded-3xl bg-[#1E293B] p-8 md:p-10 shadow-xl group"
+      >
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-[80px] -mr-20 -mt-20 group-hover:bg-orange-500/15 transition-colors"></div>
+
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex-1 text-center md:text-left">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-orange-400 text-[9px] font-black uppercase tracking-[0.2em] mb-4"
+            >
+              <Zap size={10} fill="currentColor" /> Premium Atelier
+            </motion.div>
+            <h1 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight">
+              Creative Hub, <span className="text-orange-400">{firstName}</span>
+            </h1>
+            <p className="text-slate-400 max-w-lg text-base font-medium leading-relaxed mx-auto md:mx-0">
+              Your bespoke journey continues. Manage your active orders, refine your saved masterpieces, or start a new design.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center md:justify-start gap-3">
+              <button
+                onClick={() => router.push("/customer/customize")}
+                className="px-8 py-3.5 bg-[#F97316] hover:bg-[#e66000] text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all transform hover:scale-[1.02]"
+              >
+                <Zap className="w-4 h-4" fill="currentColor" /> Start Studio
+              </button>
+              <button
+                onClick={() => router.push("/customer/orders")}
+                className="px-8 py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black uppercase tracking-widest text-xs transition-all"
+              >
+                History
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <a
-              href="/customer/cart"
-              className="relative p-2 rounded-lg hover:bg-slate-100"
-            >
-              <ShoppingCart className="w-6 h-6 text-slate-700" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
-                  {cartCount}
-                </span>
-              )}
-            </a>
-
-            <button className="p-2 rounded-lg hover:bg-slate-100">
-              <Sun className="w-5 h-5 text-slate-600" />
-            </button>
-
-            <UserAvatarMenu
-              initials={initials}
-              isOpen={isProfileMenuOpen}
-              onToggle={() => setProfileMenuOpen((v) => !v)}
-              onLogout={handleLogout}
-            />
+          <div className="relative hidden lg:block">
+            <div className="relative w-48 h-48 rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl rotate-3">
+              <Image src="/dashboard-hero.png" alt="Featured Masterpiece" fill className="object-cover" />
+            </div>
           </div>
         </div>
-      </header>
+      </motion.div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Sidebar */}
-          <aside className="lg:col-span-3">
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
-                  {initials}
-                </div>
-                <div>
-                  <div className="font-semibold">
-                    {profile?.firstName} {profile?.lastName}
+      {/* Stats Section - Minimal & Integrated */}
+      <motion.section initial="hidden" animate="visible" variants={containerVariants}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, idx) => {
+            const Icon = stat.icon;
+            return (
+              <motion.div
+                key={idx}
+                variants={itemVariants}
+                className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors
+                    ${idx === 0 ? "bg-orange-50 text-[#F97316]" : ""}
+                    ${idx === 1 ? "bg-blue-50 text-blue-600" : ""}
+                    ${idx === 2 ? "bg-rose-50 text-rose-600" : ""}
+                    ${idx === 3 ? "bg-emerald-50 text-emerald-600" : ""}
+                  `}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <div className="text-sm text-slate-500 truncate">
-                    {profile?.email}
-                  </div>
-                </div>
-              </div>
-
-              <nav className="space-y-1.5">
-                <a className="block px-3 py-2.5 rounded-lg bg-indigo-50 text-indigo-700 font-medium">
-                  Dashboard
-                </a>
-                <a href="/customer/orders" className="block px-3 py-2.5 rounded-lg hover:bg-slate-50">
-                  My Orders
-                </a>
-                <a href="/customer/designs" className="block px-3 py-2.5 rounded-lg hover:bg-slate-50">
-                  Saved Designs
-                </a>
-                <a href="/customer/messages" className="block px-3 py-2.5 rounded-lg hover:bg-slate-50">
-                  My Messages
-                </a>
-              </nav>
-            </div>
-          </aside>
-
-          {/* Main */}
-          <main className="lg:col-span-9 space-y-8">
-            {/* Stats */}
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Quick Stats</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(stats).map(([k, v]) => (
-                  <motion.div
-                    key={k}
-                    whileHover={cardHover}
-                    className="bg-white rounded-xl p-5 border shadow-sm"
-                  >
-                    <p className="text-sm text-slate-600 capitalize">
-                      {k.replace(/([A-Z])/g, " $1")}
-                    </p>
-                    <p className="mt-3 text-3xl font-bold">{v}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-
-            {/* Trending */}
-            <section id="trending">
-              <div className="flex justify-between mb-6">
-                <h2 className="text-2xl font-semibold">Trending Now</h2>
-                <a href="/trending" className="flex items-center text-indigo-600">
-                  View All <ChevronRight className="w-4 h-4 ml-1" />
-                </a>
-              </div>
-
-              <div className="hidden md:grid md:grid-cols-4 gap-4">
-                {trendingJackets.map((jacket) => (
-                  <div
-                    key={jacket.id}
-                    className="bg-white rounded-xl overflow-hidden border shadow-sm"
-                  >
-                    <img
-                      src={jacket.img}
-                      alt={jacket.title}
-                      className="h-56 w-full object-cover"
-                    />
-                    <div className="p-4">
-                      <h3 className="font-semibold">{jacket.title}</h3>
-                      <button
-                        onClick={() => handleAddToCart(jacket)}
-                        className="mt-4 w-full bg-emerald-600 text-white py-2.5 rounded-lg hover:bg-emerald-700 transition"
-                      >
-                        Add to Cart
-                      </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{stat.label}</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-xl font-black text-[#1E293B] tracking-tight">{stat.value}</p>
+                      {stat.growth && (
+                        <span className={`text-[9px] font-black truncate
+                          ${stat.growth.startsWith('+') ? "text-emerald-500" : "text-slate-400"}
+                        `}>
+                          {stat.growth}
+                        </span>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          </main>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
-      </div>
+      </motion.section>
 
-      <Footer />
-    </main>
+      {/* Trending Section - Elegant Vertical Cards */}
+      <motion.section initial="hidden" animate="visible" variants={containerVariants}>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-1.5 h-8 bg-[#1E293B] rounded-full"></div>
+            <h2 className="text-2xl font-black text-[#1E293B] tracking-tight uppercase">Hot Collections</h2>
+          </div>
+          <button onClick={() => router.push('/customer/shop')} className="group flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-[#F97316] transition-colors uppercase tracking-[0.2em]">
+            Explore All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {loadingTrending ? (
+            [1, 2, 3, 4].map((i) => (
+              <div key={i} className="rounded-[2.5rem] bg-white border border-slate-100 h-[500px] p-5 space-y-5 shadow-sm">
+                <div className="h-80 w-full animate-pulse-shimmer rounded-[2rem] bg-slate-50" />
+                <div className="space-y-4 px-2">
+                  <div className="h-6 animate-pulse-shimmer rounded-full w-3/4 bg-slate-50" />
+                  <div className="h-4 animate-pulse-shimmer rounded-full w-1/2 bg-slate-50" />
+                </div>
+              </div>
+            ))
+          ) : (
+            trendingJackets.slice(0, 4).map((jacket) => (
+              <motion.div
+                key={jacket.id}
+                initial="hidden"
+                animate="visible"
+                variants={itemVariants}
+                onClick={() => router.push(`/customer/shop/${jacket.id}`)}
+                className="group relative bg-white rounded-[2.5rem] transition-all duration-500 cursor-pointer"
+              >
+                {/* Image Wrapper - Taller Proportions */}
+                <div className="relative h-[380px] overflow-hidden rounded-[2.5rem] bg-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500">
+                  <Image
+                    src={jacket.img}
+                    alt={jacket.title}
+                    fill
+                    className="object-cover transform group-hover:scale-105 transition-transform duration-1000 ease-out"
+                    sizes="(max-width: 768px) 100vw, 25vw"
+                  />
+
+                  {/* Premium Badge */}
+                  <div className="absolute top-6 left-6 px-4 py-1.5 bg-white/90 backdrop-blur-md text-[9px] font-black text-[#F97316] rounded-full shadow-sm uppercase tracking-widest border border-white/20">
+                    {jacket.badge}
+                  </div>
+
+                  {/* Elegant Price & Action Overlay */}
+                  <div className="absolute inset-x-0 bottom-0 p-6 translate-y-6 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                    <div className="bg-[#1E293B]/90 backdrop-blur-xl p-4 rounded-[1.5rem] flex items-center justify-between shadow-2xl border border-white/10">
+                      <div>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Price</p>
+                        <p className="text-sm font-black text-white">Rs. {Number(jacket.price).toLocaleString()}</p>
+                      </div>
+                      <div className="w-10 h-10 bg-[#F97316] text-white rounded-xl flex items-center justify-center shadow-lg hover:bg-white hover:text-[#F97316] transition-colors">
+                        <Package className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Area - Clean & High End */}
+                <div className="mt-6 px-2">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-black text-xl text-[#1E293B] leading-tight group-hover:text-[#F97316] transition-colors tracking-tight">
+                      {jacket.title}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          size={12}
+                          fill={s <= Math.round(jacket.rating) ? "#FBBF24" : "none"}
+                          className={s <= Math.round(jacket.rating) ? "text-amber-400" : "text-slate-200"}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {jacket.reviews} Reviews
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </motion.section>
+    </div>
   );
 }

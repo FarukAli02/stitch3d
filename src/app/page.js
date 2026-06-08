@@ -1,4 +1,11 @@
 import Image from "next/image";
+
+/**
+ * @file page.js
+ * @description Main Landing Page.
+ * Currently displays the default Next.js template.
+ * @todo Custom landing page implementation required.
+ */
 export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -40,7 +47,7 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-          <Image
+            <Image
               className="dark:invert"
               src="/vercel.svg"
               alt="Vercel logomark"

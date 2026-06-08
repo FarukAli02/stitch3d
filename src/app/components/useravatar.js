@@ -9,8 +9,15 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
+/**
+ * @file UserAvatar.js
+ * @description User Profile Avatar & Dropdown Menu.
+ * Handles logout confirmation and navigation to profile/settings.
+ */
+
 export default function UserAvatarMenu({
   initials,
+  profileImage,
   isOpen,
   onToggle,
   onLogout,
@@ -41,8 +48,12 @@ export default function UserAvatarMenu({
           aria-expanded={isOpen}
           aria-haspopup="true"
         >
-          <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
-            {initials}
+          <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold overflow-hidden">
+            {profileImage ? (
+              <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
         </motion.button>
 

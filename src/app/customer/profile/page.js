@@ -2,32 +2,55 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Pencil, 
-  X, 
-  LogOut, 
-  User as UserIcon, 
-  CheckCircle, 
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+import {
+  Pencil,
+  X,
+  LogOut,
+  User as UserIcon,
+  CheckCircle,
   AlertCircle,
   ArrowLeft,
   Shield,
   Mail,
   Settings,
   ShoppingBag,
-  Phone
+  Phone,
+  Camera
 } from "lucide-react";
-import Footer from "@/app/components/footer";
-import UserAvatarMenu from "@/app/components/useravatar";
-const API_BASE = "http://localhost:5000/api/auth";
+import Footer from '@/app/components/Footer';
+import UserAvatarMenu from '@/app/components/UserAvatar';
+import Logo from '@/app/components/Logo';
+import AccountLayout from "../components/AccountLayout";
+
+/**
+ * @file page.js
+ * @description Customer Profile Page.
+ * View and Edit personal details (Name, Address, Phone).
+ * Updates user profile via `/api/auth/profile`.
+ */
+
+const API_BASE = "/api/auth";
+
+const ProfileSchema = Yup.object().shape({
+  firstName: Yup.string().required("First name is required"),
+  lastName: Yup.string().required("Last name is required"),
+  phone_number: Yup.string().nullable(),
+  address: Yup.string().nullable(),
+  city: Yup.string().nullable(),
+  country: Yup.string().nullable(),
+  postal_code: Yup.string().nullable(),
+});
+
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ 
-    firstName: "", 
-    lastName: "", 
+  const [initialFormValues, setInitialFormValues] = useState({
+    firstName: "",
+    lastName: "",
     email: "",
     phone_number: "",
     address: "",
@@ -35,8 +58,9 @@ export default function ProfilePage() {
     country: "",
     postal_code: ""
   });
-  
+
   const [alert, setAlert] = useState({ type: "", message: "" });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const token = () => (typeof window === "undefined" ? null : localStorage.getItem("token"));
 
@@ -51,23 +75,25 @@ export default function ProfilePage() {
       router.replace("/login");
       return;
     }
-    
+
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`${API_BASE}/profile`, { 
-          headers: { Authorization: `Bearer ${t}` } 
+        const res = await fetch(`${API_BASE}/profile`, {
+          headers: { Authorization: `Bearer ${t}` }
         });
         const data = await res.json();
-        
+
         if (!res.ok) throw new Error("Failed to fetch profile");
 
         setProfile(data);
-        
+
+        setProfile(data);
+
         // Handle both user data and customer data
         const customer = data.customer || {};
-        setForm({ 
-          firstName: data.first_name || "", 
-          lastName: data.last_name || "", 
+        setInitialFormValues({
+          firstName: data.first_name || "",
+          lastName: data.last_name || "",
           email: data.email || "",
           phone_number: customer.phone_number || "",
           address: customer.address || "",
@@ -91,9 +117,9 @@ export default function ProfilePage() {
   const cancelEdit = () => {
     if (!profile) return;
     const customer = profile.customer || {};
-    setForm({ 
-      firstName: profile.first_name || "", 
-      lastName: profile.last_name || "", 
+    setForm({
+      firstName: profile.first_name || "",
+      lastName: profile.last_name || "",
       email: profile.email,
       phone_number: customer.phone_number || "",
       address: customer.address || "",
@@ -104,38 +130,44 @@ export default function ProfilePage() {
     setEditing(false);
   };
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    if (!form.firstName || !form.lastName) {
-      return showAlert("error", "First and Last name are required");
-    }
-    
-    setSubmitting(true);
+  const handleUpdateProfile = async (values, { setSubmitting }) => {
     try {
       const res = await fetch(`${API_BASE}/profile`, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Bearer ${token()}` 
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token()}`
         },
-        body: JSON.stringify({ 
-          firstName: form.firstName, 
-          lastName: form.lastName,
+        body: JSON.stringify({
+          firstName: values.firstName,
+          lastName: values.lastName,
           customer: {
-            phone_number: form.phone_number || null,
-            address: form.address || null,
-            city: form.city || null,
-            country: form.country || null,
-            postal_code: form.postal_code || null
+            phone_number: values.phone_number || null,
+            address: values.address || null,
+            city: values.city || null,
+            country: values.country || null,
+            postal_code: values.postal_code || null
           }
         }),
       });
-      
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Update failed");
-
-      // Update local state with returned data
       setProfile(data.user ? { ...data.user, customer: data.customer } : data);
+
+      const newCustomer = (data.user ? data.customer : data.customer) || {};
+      const newUser = data.user || data;
+      setInitialFormValues({
+        firstName: newUser.first_name || "",
+        lastName: newUser.last_name || "",
+        email: newUser.email || "",
+        phone_number: newCustomer.phone_number || "",
+        address: newCustomer.address || "",
+        city: newCustomer.city || "",
+        country: newCustomer.country || "",
+        postal_code: newCustomer.postal_code || ""
+      });
+
       setEditing(false);
       showAlert("success", "Profile updated successfully");
     } catch (err) {
@@ -146,14 +178,44 @@ export default function ProfilePage() {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    setUploadingImage(true);
+    try {
+      const res = await fetch(`${API_BASE}/profile/image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token()}`
+        },
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Upload failed");
+
+      setProfile({ ...profile, profile_image: data.imagePath });
+      showAlert("success", "Profile picture updated");
+    } catch (err) {
+      console.error("Upload error:", err);
+      showAlert("error", err.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const initials = profile ? (profile.first_name?.[0] || "U").toUpperCase() : "";
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-orange-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-slate-600 font-medium">Loading your profile...</span>
+          <div className="w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-zinc-400 font-medium">Loading your profile...</span>
         </div>
       </div>
     );
@@ -162,267 +224,236 @@ export default function ProfilePage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.back()}
-              className="p-2 -ml-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div 
-              className="flex items-center gap-1 cursor-pointer" 
-              onClick={() => router.push("/customer/dashboard")}
-            >
-              <span className="text-xl font-bold text-slate-900">Stitch</span>
-              <span className="text-xl font-bold text-indigo-600">3D</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Sidebar */}
-          <aside className="lg:col-span-3 lg:sticky lg:top-24 h-fit">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex flex-col items-center text-center pb-6 border-b border-slate-200">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg mb-4">
-                  {initials}
-                </div>
-                <h2 className="text-lg font-bold text-slate-900 truncate w-full">
-                  {profile.first_name} {profile.last_name}
-                </h2>
-                <p className="text-sm text-slate-500 truncate w-full">{profile.email}</p>
-                <span className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-                  {profile.role || "Customer"}
-                </span>
-              </div>
-              
-              <nav className="mt-6 space-y-1">
-                <button 
-                  onClick={() => router.push("/customer/dashboard")}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  Dashboard
-                </button>
-                <div className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium bg-indigo-50 text-indigo-700 rounded-lg">
-                  <UserIcon className="w-4 h-4" />
-                  Profile
-                </div>
-                <button 
-                  onClick={() => router.push("/customer/settings")}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  <Settings className="w-4 h-4" />
-                  Settings
-                </button>
-              </nav>
-            </div>
-          </aside>
-
-          {/* Content */}
-          <div className="lg:col-span-9 space-y-6">
-            
-            <div className="mb-2">
-              <h1 className="text-2xl font-bold text-slate-900">Profile Information</h1>
-              <p className="text-slate-600">Manage your personal details and contact information.</p>
-            </div>
-
-            {/* Personal Info */}
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                    <UserIcon className="w-5 h-5" />
+    <AccountLayout>
+      <div className="space-y-6">
+        <Formik
+          initialValues={initialFormValues}
+          validationSchema={ProfileSchema}
+          enableReinitialize={true}
+          onSubmit={handleUpdateProfile}
+        >
+          {({ isSubmitting, resetForm, dirty }) => (
+            <Form>
+              {/* Profile Header / Avatar Section */}
+              <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 mb-6 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
+                <div className="relative group">
+                  <div className="w-32 h-32 rounded-[2rem] bg-orange-600 text-white flex items-center justify-center text-4xl font-black shadow-xl overflow-hidden relative border-4 border-white ring-1 ring-slate-100">
+                    {profile.profile_image ? (
+                      <img src={profile.profile_image} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                    {uploadingImage && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
                   </div>
-                  <h3 className="font-semibold text-slate-900">Personal Details</h3>
+                  <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg border border-slate-100 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-all text-slate-400 hover:text-[#F97316]">
+                    <Camera size={18} />
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} />
+                  </label>
                 </div>
-                {!editing && (
-                  <button 
-                    onClick={() => setEditing(true)}
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 px-3 py-1.5 hover:bg-indigo-50 rounded-lg transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    Edit
-                  </button>
-                )}
+                <div className="text-center md:text-left relative z-10">
+                  <h2 className="text-3xl font-black text-[#1E293B] tracking-tight">{profile.first_name} {profile.last_name}</h2>
+                  <p className="text-slate-500 font-bold mt-1">{profile.email}</p>
+                  <div className="mt-4 flex items-center justify-center md:justify-start gap-2">
+                    <span className="px-3 py-1 bg-orange-50 text-[#F97316] text-[10px] font-black uppercase tracking-widest rounded-full border border-orange-100">
+                      {profile.role}
+                    </span>
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-100">
+                      Verified Account
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-6 md:p-8">
-                <form onSubmit={handleUpdateProfile}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Input
+              <section className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-orange-50 text-[#F97316] rounded-xl">
+                      <UserIcon className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-bold text-[#1E293B] text-lg">Personal Details</h3>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {!editing && (
+                      <button
+                        type="button"
+                        onClick={() => setEditing(true)}
+                        className="text-sm font-bold text-[#F97316] hover:bg-orange-50 px-4 py-2 rounded-xl transition-all border border-orange-100"
+                      >
+                        <Pencil className="w-4 h-4 inline-block mr-2" />
+                        Edit Profile
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-8 md:p-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Field
                       label="First Name"
                       name="firstName"
                       disabled={!editing}
-                      value={form.firstName}
-                      onChange={handleInputChange}
-                      required
+                      component={SecurityInput}
                     />
-                    <Input
+                    <Field
                       label="Last Name"
                       name="lastName"
                       disabled={!editing}
-                      value={form.lastName}
-                      onChange={handleInputChange}
-                      required
+                      component={SecurityInput}
                     />
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+                      <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Email Address</label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Mail className="h-4 w-4 text-slate-400" />
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Mail className="h-5 w-5 text-slate-400" />
                         </div>
                         <input
                           type="email"
                           disabled
-                          value={form.email}
-                          className="block w-full pl-10 rounded-lg border-transparent bg-slate-50 text-slate-500 text-sm py-2.5 px-3.5 cursor-not-allowed"
+                          value={initialFormValues.email}
+                          className="block w-full pl-12 rounded-2xl border-slate-100 bg-slate-50 text-slate-400 text-sm font-bold py-4 px-4 cursor-not-allowed"
                         />
                       </div>
-                      <p className="mt-1.5 text-xs text-slate-500 flex items-center gap-1">
-                        <Shield className="w-3 h-3" /> 
+                      <p className="mt-2 text-xs text-slate-400 flex items-center gap-1.5 ml-1">
+                        <Shield className="w-3.5 h-3.5" />
                         Email cannot be changed for security
                       </p>
                     </div>
-                  </div>
 
-                  <AnimatePresence>
                     {editing && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-8 flex items-center gap-3 pt-4 border-t border-slate-200"
-                      >
+                      <div className="md:col-span-2 flex items-center gap-4 pt-4">
                         <button
                           type="submit"
-                          disabled={submitting}
-                          className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-all disabled:opacity-70"
+                          disabled={isSubmitting}
+                          className="px-8 py-3.5 bg-[#F97316] text-white text-sm font-black uppercase tracking-widest rounded-2xl hover:bg-[#e66000] transition-all shadow-lg shadow-orange-500/20 disabled:opacity-50"
                         >
-                          {submitting ? 'Saving...' : 'Save Changes'}
+                          {isSubmitting ? "Saving..." : "Save Changes"}
                         </button>
                         <button
                           type="button"
-                          onClick={cancelEdit}
-                          className="px-5 py-2.5 bg-white text-slate-700 border border-slate-300 text-sm font-medium rounded-lg hover:bg-slate-50 transition-all"
+                          onClick={() => {
+                            resetForm();
+                            setEditing(false);
+                          }}
+                          className="px-8 py-3.5 bg-slate-100 text-slate-600 text-sm font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 transition-all"
                         >
                           Cancel
                         </button>
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
-                </form>
-              </div>
-            </section>
-
-            {/* Contact Info */}
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                    <Phone className="w-5 h-5" />
                   </div>
-                  <h3 className="font-semibold text-slate-900">Contact Information</h3>
-                </div>
-              </div>
 
-              <div className="p-6 md:p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Phone Number"
-                    name="phone_number"
-                    type="tel"
-                    disabled={!editing}
-                    value={form.phone_number}
-                    onChange={handleInputChange}
-                  />
-                  <Input
-                    label="City"
-                    name="city"
-                    disabled={!editing}
-                    value={form.city}
-                    onChange={handleInputChange}
-                  />
-                  <div className="md:col-span-2">
-                    <Input
-                      label="Address"
-                      name="address"
-                      disabled={!editing}
-                      value={form.address}
-                      onChange={handleInputChange}
-                    />
+                  <div className="mt-12 pt-12 border-t border-slate-50">
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <Phone className="w-5 h-5" />
+                      </div>
+                      <h3 className="font-bold text-[#1E293B] text-lg">Contact Information</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <Field
+                        label="Phone Number"
+                        name="phone_number"
+                        type="tel"
+                        disabled={!editing}
+                        component={FormikInput}
+                      />
+                      <Field
+                        label="City"
+                        name="city"
+                        disabled={!editing}
+                        component={FormikInput}
+                      />
+                      <div className="md:col-span-2">
+                        <Field
+                          label="Address"
+                          name="address"
+                          disabled={!editing}
+                          component={FormikInput}
+                        />
+                      </div>
+                      <Field
+                        label="Country"
+                        name="country"
+                        disabled={!editing}
+                        component={FormikInput}
+                      />
+                      <Field
+                        label="Postal Code"
+                        name="postal_code"
+                        disabled={!editing}
+                        component={FormikInput}
+                      />
+                    </div>
                   </div>
-                  <Input
-                    label="Country"
-                    name="country"
-                    disabled={!editing}
-                    value={form.country}
-                    onChange={handleInputChange}
-                  />
-                  <Input
-                    label="Postal Code"
-                    name="postal_code"
-                    disabled={!editing}
-                    value={form.postal_code}
-                    onChange={handleInputChange}
-                  />
                 </div>
-              </div>
-            </section>
+              </section>
+            </Form>
+          )}
+        </Formik>
+      </div>
 
-          </div>
-        </div>
-      </main>
-
-      <Footer />
-      
-      {/* Alert */}
       <AnimatePresence>
         {alert.message && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed bottom-6 right-6 z-50 p-4 rounded-xl shadow-xl border flex items-center gap-3 max-w-sm backdrop-blur-sm ${
-              alert.type === 'error' 
-                ? 'bg-rose-50 border-rose-200 text-rose-800' 
-                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-            }`}
+            className={`fixed bottom-6 right-6 z-50 p-5 rounded-2xl shadow-2xl border flex items-center gap-3 max-w-sm backdrop-blur-md ${alert.type === 'error'
+              ? 'bg-rose-50 border-rose-100 text-rose-800'
+              : 'bg-emerald-50 border-emerald-100 text-emerald-800'
+              }`}
           >
-            {alert.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
-            <p className="text-sm font-medium">{alert.message}</p>
-            <button onClick={() => setAlert({ type: "", message: "" })} className="ml-auto">
+            {alert.type === 'error' ? <AlertCircle className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
+            <p className="text-sm font-bold">{alert.message}</p>
+            <button onClick={() => setAlert({ type: "", message: "" })} className="ml-auto p-1 hover:bg-black/5 rounded-lg transition-colors">
               <X className="w-4 h-4" />
             </button>
           </motion.div>
         )}
       </AnimatePresence>
+    </AccountLayout>
+  );
+}
+
+function SecurityInput({ label, disabled, field, form: { touched, errors }, ...props }) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+      <input
+        {...field}
+        {...props}
+        disabled={disabled}
+        className={`w-full px-5 py-4 bg-slate-50 border-2 rounded-2xl text-slate-700 font-bold text-sm focus:ring-4 focus:ring-orange-500/10 focus:border-[#F97316] transition-all outline-none ${disabled ? 'opacity-70 bg-slate-50 cursor-not-allowed border-slate-100' : 'border-slate-100 hover:border-slate-200'} ${touched[field.name] && errors[field.name] ? 'border-rose-200' : ''}`}
+      />
+      {touched[field.name] && errors[field.name] && (
+        <div className="mt-2 text-xs text-rose-500 font-bold ml-1 uppercase">{errors[field.name]}</div>
+      )}
     </div>
   );
 }
 
-function Input({ label, disabled, ...props }) {
+function FormikInput({ label, disabled, field, form: { touched, errors }, ...props }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+    <div className="space-y-2">
+      <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">{label}</label>
       <input
         disabled={disabled}
-        className={`block w-full rounded-lg text-sm py-2.5 px-3.5 transition-all ${
-          disabled 
-            ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-transparent' 
-            : 'bg-white border border-slate-300 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
-        }`}
+        className={`w-full px-5 py-4 bg-slate-50 border-2 rounded-2xl text-slate-700 font-bold text-sm placeholder-slate-400 transition-all outline-none ${disabled
+          ? "opacity-70 bg-slate-50 border-slate-100 cursor-not-allowed"
+          : "border-slate-100 hover:border-slate-200 focus:ring-4 focus:ring-orange-500/10 focus:border-[#F97316]"
+          } ${touched[field.name] && errors[field.name] ? 'border-rose-200' : ''}`}
+        {...field}
         {...props}
       />
+      {touched[field.name] && errors[field.name] && (
+        <div className="mt-2 text-xs text-rose-500 font-bold ml-1 uppercase">{errors[field.name]}</div>
+      )}
     </div>
   );
 }

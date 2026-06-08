@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Eye, X, Scissors, Layers, ArrowLeft } from "lucide-react";
-import UserAvatar from "@/app/components/useravatar";
+import UserAvatar from "@/app/components/UserAvatar";
 
 export default function TrendingPage() {
   const router = useRouter();
@@ -17,78 +17,34 @@ export default function TrendingPage() {
 
   const vibes = ["All", "Streetwear", "Varsity", "Minimalist", "Cyberpunk", "Heritage", "Avant-Garde"];
 
-  
-  const jackets = [
-    {
-      id: 1,
-      name: "Midnight Runner",
-      creator: "Alex Chen",
-      vibe: "Streetwear",
-      uses: 342,
-      materials: ["Premium Leather", "Nylon Lining"],
-      price: 890,
-      img: "https://miro.medium.com/v2/resize:fit:600/1*sJGRHxd0Q5wNXsPs4gZRvg.jpeg",
-      tall: false,
-    },
-    {
-      id: 2,
-      name: "Varsity Legend",
-      creator: "Jamie Park",
-      vibe: "Varsity",
-      uses: 567,
-      materials: ["Wool Body", "Leather Sleeves", "Chenille Patches"],
-      price: 720,
-      img: "https://tse1.mm.bing.net/th/id/OIP.VGlLe9KI1ULxY2OG5QXePAHaHa?rs=1&pid=ImgDetMain",
-      tall: true,
-    },
-    {
-      id: 3,
-      name: "Neo Tokyo",
-      creator: "Kai Tanaka",
-      vibe: "Cyberpunk",
-      uses: 891,
-      materials: ["Synthetic Leather", "Reflective Trim", "Tech Fabric"],
-      price: 1200,
-      img: "https://tse2.mm.bing.net/th/id/OIP.XWHyVbqQhjR0BpSWHbCYQwHaJ4?rs=1&pid=ImgDetMain",
-      tall: false,
-    },
-    {
-      id: 4,
-      name: "Heritage Rider",
-      creator: "Marcus Stone",
-      vibe: "Heritage",
-      uses: 234,
-      materials: ["Full Grain Leather", "YKK Zippers", "Brass Hardware"],
-      price: 1450,
-      img: "https://th.bing.com/th/id/OIP.ergNH0eXxWFFcQTm1HTOZgHaHy?w=172&h=181&c=7&r=0&o=7&dpr=1.3&pid=1.7",
-      tall: true,
-    },
-    {
-      id: 5,
-      name: "Mono Form",
-      creator: "Elena Volkov",
-      vibe: "Minimalist",
-      uses: 678,
-      materials: ["Italian Leather", "Minimal Hardware"],
-      price: 980,
-      img: "https://miro.medium.com/v2/resize:fit:600/1*sJGRHxd0Q5wNXsPs4gZRvg.jpeg",
-      tall: false,
-    },
-    {
-      id: 6,
-      name: "Urban Myth",
-      creator: "Dev Singh",
-      vibe: "Streetwear",
-      uses: 445,
-      materials: ["Distressed Leather", "Cotton Lining"],
-      price: 850,
-      img: "https://tse1.mm.bing.net/th/id/OIP.VGlLe9KI1ULxY2OG5QXePAHaHa?rs=1&pid=ImgDetMain",
-      tall: false,
-    },
-  ];
 
-  const filteredJackets = activeVibe === "All" 
-    ? jackets 
+  const [jackets, setJackets] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/public/products/trending')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Map to UI format
+          const formatted = data.map(p => ({
+            id: p.id,
+            name: p.name,
+            creator: "Vendor",
+            vibe: p.category || "All",
+            uses: Math.floor(Math.random() * 500) + 100,
+            materials: ["Premium Quality"],
+            price: Number(p.price),
+            img: p.image,
+            tall: Math.random() > 0.5
+          }));
+          setJackets(formatted);
+        }
+      })
+      .catch(err => console.error("Failed to load trending items", err));
+  }, []);
+
+  const filteredJackets = activeVibe === "All"
+    ? jackets
     : jackets.filter(j => j.vibe === activeVibe);
 
   // Fetch profile - Fixed with proper error handling
@@ -98,19 +54,19 @@ export default function TrendingPage() {
 
     (async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/auth/profile", {
+        const res = await fetch("/api/auth/profile", {
           method: "GET",
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           }
         });
-        
+
         if (!res.ok) {
           console.warn("Profile fetch failed:", res.status);
           return;
         }
-        
+
         const data = await res.json();
         setProfile({
           userId: data.user_id,
@@ -148,7 +104,7 @@ export default function TrendingPage() {
 
   const handleRemix = (jacket) => {
     setRemixingJacket(jacket);
-    
+
     const steps = [
       { delay: 400 },
       { delay: 600 },
@@ -160,11 +116,11 @@ export default function TrendingPage() {
     const interval = setInterval(() => {
       currentStep++;
       setLoadingStep(currentStep);
-      
+
       if (currentStep >= steps.length) {
         clearInterval(interval);
         setTimeout(() => {
-          router.push(`/customize?template=${jacket.id}`);
+          router.push(`/customer/customize?template=${jacket.id}`);
         }, 300);
       }
     }, steps[currentStep]?.delay || 500);
@@ -176,61 +132,39 @@ export default function TrendingPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
-          <div className="max-w-[1800px] mx-auto px-12 py-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-6">
-                <button 
-                  onClick={() => router.push("/customer/dashboard")}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                  aria-label="Back to dashboard"
-                >
-                  <ArrowLeft className="w-5 h-5 text-slate-700" />
-                </button>
-                <div className="cursor-pointer" onClick={() => router.push("/customer/dashboard")}>
-                  <h1 className="text-2xl font-bold tracking-tight">
-                    <span className="text-slate-900">Stitch</span>
-                    <span className="text-indigo-600">3D</span>
-                  </h1>
-                </div>
-              </div>
-              <UserAvatar profile={profile} />
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-orange-50">
 
-            {/* Vibe Tags */}
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 hide-scrollbar">
-              <span className="text-xs text-slate-500 font-mono uppercase tracking-wider mr-2 whitespace-nowrap">
-                Filter by Vibe
-              </span>
-              {vibes.map(vibe => (
-                <motion.button
-                  key={vibe}
-                  onClick={() => setActiveVibe(vibe)}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`px-5 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
-                    activeVibe === vibe
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                      : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300"
+        {/* Vibe Filters Bar */}
+        <div className="bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm sticky top-0 z-30 px-6 py-4">
+          <div className="max-w-[1800px] mx-auto flex items-center gap-3 overflow-x-auto hide-scrollbar">
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest mr-2 whitespace-nowrap">
+              Filter by Vibe
+            </span>
+            {vibes.map(vibe => (
+              <motion.button
+                key={vibe}
+                onClick={() => setActiveVibe(vibe)}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeVibe === vibe
+                  ? "bg-[#F97316] text-white shadow-lg shadow-orange-500/30"
+                  : "bg-white text-slate-400 hover:bg-slate-50 border border-slate-200 hover:border-[#F97316] hover:text-[#F97316]"
                   }`}
-                >
-                  {vibe}
-                </motion.button>
-              ))}
-            </div>
+              >
+                {vibe}
+              </motion.button>
+            ))}
           </div>
-        </header>
+        </div>
 
         {/* Masonry Grid */}
         <div className="max-w-[1800px] mx-auto px-12 py-12">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Trending Designs</h2>
-            <p className="text-slate-600">Discover and remix jackets crafted by our community</p>
+          <div className="mb-12">
+            <h2 className="text-3xl md:text-4xl font-black text-[#1E293B] uppercase tracking-tight mb-2">Trending Designs</h2>
+            <p className="text-slate-500 font-medium">Discover and remix jackets crafted by our community</p>
           </div>
 
-          <motion.div 
+          <motion.div
             layout
             className="grid grid-cols-3 gap-8 auto-rows-[400px]"
             style={{
@@ -247,38 +181,37 @@ export default function TrendingPage() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ 
+                  transition={{
                     duration: 0.3,
                     delay: idx * 0.05,
                     ease: [0.16, 1, 0.3, 1]
                   }}
-                  className={`group relative bg-white rounded-2xl overflow-hidden cursor-pointer border border-slate-200 hover:border-indigo-300 transition-all ${
-                    jacket.tall ? "row-span-2" : "row-span-1"
-                  }`}
+                  className={`group relative bg-white rounded-[2.5rem] overflow-hidden cursor-pointer border border-slate-100 hover:border-[#F97316]/30 transition-all ${jacket.tall ? "row-span-2" : "row-span-1"
+                    }`}
                   style={{
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)"
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.04)"
                   }}
                 >
                   {/* Image Container */}
-                  <div className="relative w-full h-full overflow-hidden bg-slate-100">
+                  <div className="relative w-full h-full overflow-hidden bg-slate-50">
                     <motion.img
                       src={jacket.img}
                       alt={jacket.name}
                       className="w-full h-full object-cover"
-                      whileHover={{ 
+                      whileHover={{
                         scale: 1.05,
                         transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
                       }}
                     />
-                    
+
                     {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1E293B]/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
 
                   {/* Default State - Bottom Info */}
-                  <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-white via-white/95 to-transparent">
-                    <h3 className="text-lg font-bold text-slate-900 mb-0.5">{jacket.name}</h3>
-                    <p className="text-sm text-slate-600 font-mono">{jacket.creator}</p>
+                  <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent">
+                    <h3 className="text-xl font-black text-[#1E293B] mb-1 tracking-tight">{jacket.name}</h3>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{jacket.creator}</p>
                   </div>
 
                   {/* Hover State - UI Reveal */}
@@ -286,7 +219,7 @@ export default function TrendingPage() {
                     initial={{ opacity: 0, y: 20 }}
                     whileHover={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute inset-0 flex flex-col justify-between p-5 opacity-0 group-hover:opacity-100"
+                    className="absolute inset-0 flex flex-col justify-between p-6 opacity-0 group-hover:opacity-100"
                   >
                     {/* Top - Like & Quick Look */}
                     <div className="flex justify-between items-start">
@@ -296,10 +229,10 @@ export default function TrendingPage() {
                           toggleLike(jacket.id);
                         }}
                         whileTap={{ scale: 0.9 }}
-                        className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+                        className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/50 flex items-center justify-center shadow-lg hover:bg-white transition-colors"
                       >
-                        <Heart 
-                          className={`w-5 h-5 ${likes[jacket.id] ? "fill-rose-500 text-rose-500" : "text-slate-700"}`}
+                        <Heart
+                          className={`w-5 h-5 ${likes[jacket.id] ? "fill-rose-500 text-rose-500" : "text-slate-400"}`}
                         />
                       </motion.button>
 
@@ -309,15 +242,15 @@ export default function TrendingPage() {
                           setQuickLookJacket(jacket);
                         }}
                         whileTap={{ scale: 0.9 }}
-                        className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+                        className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/50 flex items-center justify-center shadow-lg hover:bg-white transition-colors"
                       >
-                        <Eye className="w-5 h-5 text-slate-700" />
+                        <Eye className="w-5 h-5 text-slate-400" />
                       </motion.button>
                     </div>
 
                     {/* Bottom - Social Proof & CTA */}
                     <div>
-                      <div className="mb-3 flex items-center gap-2 text-xs text-white/90 font-mono px-3 py-1.5 bg-slate-900/60 backdrop-blur-sm rounded-full w-fit">
+                      <div className="mb-4 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-white px-4 py-2 bg-[#1E293B]/60 backdrop-blur-md rounded-full w-fit">
                         <Layers className="w-3 h-3" />
                         <span>Used by {jacket.uses} designers</span>
                       </div>
@@ -326,7 +259,7 @@ export default function TrendingPage() {
                         onClick={() => handleRemix(jacket)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-600/40 hover:shadow-xl hover:shadow-indigo-600/50 hover:bg-indigo-700 transition-all"
+                        className="w-full py-4 bg-[#F97316] text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/40 hover:bg-[#e66000] transition-all"
                       >
                         Remix
                       </motion.button>
@@ -349,7 +282,7 @@ export default function TrendingPage() {
               onClick={() => setQuickLookJacket(null)}
             >
               {/* Backdrop */}
-              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xl" />
+              <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-md" />
 
               {/* Modal */}
               <motion.div
@@ -358,49 +291,51 @@ export default function TrendingPage() {
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl overflow-hidden max-w-5xl w-full grid grid-cols-2 gap-8 p-12 shadow-2xl"
+                className="relative bg-white rounded-[2.5rem] overflow-hidden max-w-5xl w-full grid grid-cols-2 gap-12 p-12 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100"
               >
                 {/* Close Button */}
                 <button
                   onClick={() => setQuickLookJacket(null)}
-                  className="absolute top-6 right-6 w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                  className="absolute top-6 right-6 w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors border border-slate-200"
                   aria-label="Close"
                 >
-                  <X className="w-5 h-5 text-slate-700" />
+                  <X className="w-5 h-5 text-slate-400" />
                 </button>
 
                 {/* Left - Image */}
-                <div className="relative rounded-2xl overflow-hidden bg-slate-100 shadow-inner">
-                  <img 
-                    src={quickLookJacket.img} 
+                <div className="relative rounded-[2rem] overflow-hidden bg-slate-50 shadow-inner">
+                  <img
+                    src={quickLookJacket.img}
                     alt={quickLookJacket.name}
                     className="w-full h-[600px] object-cover"
                   />
                 </div>
 
                 {/* Right - Info */}
-                <div className="flex flex-col justify-between">
+                <div className="flex flex-col justify-between py-4">
                   <div>
-                    <h2 className="text-4xl font-bold text-slate-900 mb-2">{quickLookJacket.name}</h2>
-                    <p className="text-slate-600 font-mono mb-8">by {quickLookJacket.creator}</p>
+                    <h2 className="text-4xl font-black text-[#1E293B] mb-2 tracking-tight uppercase">{quickLookJacket.name}</h2>
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-10">by {quickLookJacket.creator}</p>
 
                     {/* Jacket DNA */}
-                    <div className="mb-8">
-                      <h3 className="text-sm font-mono uppercase tracking-wider text-slate-500 mb-4">Jacket DNA</h3>
+                    <div className="mb-10">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Jacket DNA</h3>
                       <div className="space-y-3">
                         {quickLookJacket.materials.map((material, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                            <Scissors className="w-4 h-4 text-indigo-600" />
-                            <span className="text-sm font-mono text-slate-700">{material}</span>
+                          <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
+                              <Scissors className="w-4 h-4 text-[#F97316]" />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-widest text-[#1E293B]">{material}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Price */}
-                    <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                      <p className="text-xs font-mono uppercase tracking-wider text-indigo-600 mb-1">Estimated Price</p>
-                      <p className="text-3xl font-bold text-slate-900">${quickLookJacket.price}</p>
+                    <div className="p-6 bg-orange-50/50 rounded-2xl border border-orange-100/50">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#F97316] mb-2">Estimated Price</p>
+                      <p className="text-4xl font-black text-[#1E293B] tracking-tight">Rs {quickLookJacket.price}</p>
                     </div>
                   </div>
 
@@ -412,9 +347,9 @@ export default function TrendingPage() {
                     }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full py-5 bg-indigo-600 text-white rounded-xl font-bold text-xl shadow-lg shadow-indigo-600/40 hover:shadow-xl hover:shadow-indigo-600/50 hover:bg-indigo-700 transition-all"
+                    className="w-full py-5 bg-[#F97316] text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-500/20 hover:shadow-2xl hover:shadow-orange-500/30 hover:bg-[#e66000] transition-all"
                   >
-                    Remix This Jacket
+                    Remix This Masterpiece
                   </motion.button>
                 </div>
               </motion.div>
@@ -442,9 +377,11 @@ export default function TrendingPage() {
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
-                  className="mb-8"
+                  className="mb-8 flex justify-center"
                 >
-                  <Scissors className="w-16 h-16 mx-auto text-indigo-600" />
+                  <div className="w-24 h-24 rounded-[2rem] bg-orange-50 flex items-center justify-center">
+                    <Scissors className="w-10 h-10 text-[#F97316]" />
+                  </div>
                 </motion.div>
 
                 <motion.h2
@@ -452,21 +389,21 @@ export default function TrendingPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="text-2xl font-bold text-slate-900 mb-2"
+                  className="text-3xl font-black text-[#1E293B] mb-3 tracking-tight uppercase"
                 >
                   {
                     loadingStep === 0 ? "Loading Pattern…" :
-                    loadingStep === 1 ? "Cutting Fabric…" :
-                    loadingStep === 2 ? "Stitching Sleeves…" :
-                    "Ready."
+                      loadingStep === 1 ? "Cutting Fabric…" :
+                        loadingStep === 2 ? "Stitching Sleeves…" :
+                          "Ready."
                   }
                 </motion.h2>
-                <p className="text-slate-600 font-mono text-sm">Building your jacket</p>
+                <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Building your masterpiece</p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
+      </div>
 
       {/* Global Styles - Moved outside main to prevent hydration issues */}
       <style jsx global>{`

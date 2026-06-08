@@ -1,402 +1,385 @@
-// File: app/checkout/page.js
-// Purpose: Multi-step checkout process - Light Theme
-// Author: Stitch3D-Dev
-// Env Required: None (frontend only)
-
 "use client";
-
-import React, { useState, useEffect } from "react";
+import Logo from '@/app/components/Logo';
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  Check, 
-  Lock, 
-  Truck, 
-  CreditCard, 
-  ShieldCheck, 
-  MapPin,
-  ArrowLeft
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import Footer from "@/app/components/footer";
+import { ArrowLeft, Truck, CheckCircle, AlertCircle, CreditCard, Banknote } from "lucide-react";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+import Footer from '@/app/components/Footer';
+import { useCart } from "@/app/context/CartContext";
+import ConfirmationModal from "@/app/components/ConfirmationModal";
+import Input from "@/app/components/ui/Input";
+import Button from "@/app/components/ui/Button";
+
+/**
+ * @file page.js
+ * @description Checkout Page.
+ * Collects shipping details and places the order via `/api/customer/orders`.
+ * Handles COD payment method logic.
+ */
+
+const SHIPPING_FEE = 500;
+const FREE_SHIPPING_THRESHOLD = 5000;
+const TAX_RATE = 0.17;
+
+const CheckoutSchema = Yup.object().shape({
+  phone_number: Yup.string().required("Phone number is required"),
+  address: Yup.string().required("Shipping address is required"),
+  city: Yup.string().required("City is required"),
+  country: Yup.string().required("Country is required"),
+  postal_code: Yup.string().required("Postal code is required"),
+  payment_method: Yup.string().oneOf(["COD", "Card"]).required("Payment method is required"),
+  card_number: Yup.string().when("payment_method", {
+    is: "Card",
+    then: (schema) => schema.required("Card number is required").matches(/^(\d{16}|•••• •••• •••• \d{4})$/, "Invalid card format"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  card_expiry: Yup.string().when("payment_method", {
+    is: "Card",
+    then: (schema) => schema.required("Expiry is required").matches(/^(0[1-9]|1[0-2])\/\d{2}$/, "MM/YY"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  card_cvv: Yup.string().when("payment_method", {
+    is: "Card",
+    then: (schema) => schema.required("CVV is required").matches(/^(\d{3}|•••)$/, "Invalid CVV"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+});
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(1);
+  const { clearCart } = useCart();
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  
-  const cart = {
-    items: [
-      { id: 1, name: "Classic Leather Biker Jacket", price: 250.00, size: "M", color: "Black", image: "/jacket1.jpg" },
-      { id: 2, name: "Custom Patches Add-on", price: 30.00, size: "-", color: "N/A", image: "/patch.jpg" }
-    ],
-    subtotal: 280.00,
-    shipping: 0,
-    tax: 5.0
+  const [cartItems, setCartItems] = useState([]);
+
+  // Custom Alert State
+  const [conf, setConf] = useState({
+    open: false,
+    title: "",
+    message: "",
+    type: "warning",
+    onConfirm: () => { },
+    hideCancel: false
+  });
+
+  const showAlert = (title, message, type = "success") => {
+    setConf({ open: true, title, message, type, hideCancel: true, onConfirm: () => { } });
   };
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
+  const [initialFormValues, setInitialFormValues] = useState({
     phone_number: "",
     address: "",
     city: "",
-    country: "",
+    country: "Pakistan",
     postal_code: "",
-    shippingMethod: "standard",
-    cardNumber: "",
-    expiry: "",
-    cvc: ""
+    payment_method: "COD",
+    card_number: "",
+    card_expiry: "",
+    card_cvv: "",
   });
 
+  /* =========================
+     LOAD CART + AUTH
+  ========================== */
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      router.push("/login?redirect=/checkout");
+      router.push("/login?redirect=/customer/checkout");
       return;
     }
 
-    setTimeout(() => {
-      setFormData(prev => ({
-        ...prev,
-        firstName: "Farrukh", 
-        lastName: "Ali",
-        email: "farrukh@example.com",
-        phone_number: "03001234567",
-        address: "123 Leather Lane",
-        city: "Karachi",
-        country: "Pakistan",
-        postal_code: "75500"
-      }));
-      setLoading(false);
-    }, 800);
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userId = payload.id || payload.userId;
+      const cartKey = userId ? `cart_${userId}` : 'cart';
+      const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+      setCartItems(cart);
+    } catch (e) {
+      setCartItems([]);
+    }
+
+    fetch("/api/customer/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setInitialFormValues({
+          phone_number: data.phone_number || "",
+          address: data.address || "",
+          city: data.city || "",
+          country: data.country || "Pakistan",
+          postal_code: data.postal_code || "",
+          payment_method: data.payment_card_last4 ? "Card" : "COD",
+          card_number: data.payment_card_last4 ? `•••• •••• •••• ${data.payment_card_last4}` : "",
+          card_expiry: data.payment_card_expiry || "",
+          card_cvv: data.payment_card_last4 ? "•••" : "",
+        });
+      })
+      .finally(() => setLoading(false));
   }, [router]);
 
-  const handleChange = (e) => {
+  /* =========================
+     PRICE CALCULATIONS
+  ========================== */
+  const subtotal = useMemo(
+    () =>
+      cartItems.reduce(
+        (sum, item) => sum + Number(item.price) * item.quantity,
+        0
+      ),
+    [cartItems]
+  );
+
+  const shippingFee =
+    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+  const taxAmount = Math.round((subtotal + shippingFee) * TAX_RATE);
+  const total = subtotal + shippingFee + taxAmount;
+
+  /* =========================
+     HANDLERS
+  ========================== */
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
-  const handleStepComplete = (step) => {
-    setCurrentStep(step + 1);
-  };
+  const handlePlaceOrder = async (values, { setSubmitting }) => {
+    const token = localStorage.getItem("token");
 
-  const handlePlaceOrder = async () => {
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      /* 1️⃣ SAVE CUSTOMER PROFILE */
+      await fetch("/api/customer/profile", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
+
+      /* 2️⃣ PLACE ORDER (COD) */
+      const res = await fetch("/api/customer/orders", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: cartItems,
+          shipping_address: values,
+          payment_method: values.payment_method,
+          subtotal,
+          shipping_fee: shippingFee,
+          tax: taxAmount,
+          total,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Order failed");
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userId = payload.id || payload.userId;
+        const cartKey = userId ? `cart_${userId}` : 'cart';
+        localStorage.removeItem(cartKey);
+      } catch (e) {
+        localStorage.removeItem("cart"); // Fallback
+      }
+      clearCart(); // NEW: sync context!
       router.push("/customer/orders?success=true");
-    }, 2000);
+    } catch (err) {
+      console.error(err);
+      showAlert("Order Error", "Something went wrong while placing your order. Please try again later.", "warning");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const shippingCost = formData.shippingMethod === "express" ? 25.00 : 0.00;
-  const tax = (cart.subtotal + shippingCost) * 0.05;
-  const total = cart.subtotal + shippingCost + tax;
+  if (loading) return null;
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="text-slate-600">Loading checkout...</div>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.back()} 
-              className="p-2 -ml-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-extrabold tracking-tight">
-                <span className="text-slate-900">Stitch</span>
-                <span className="text-indigo-600">3D</span>
-              </span>
-              <span className="text-slate-300 text-xl font-light">|</span>
-              <span className="text-slate-700 font-medium tracking-wide">Checkout</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Lock className="w-4 h-4" />
-            <span className="hidden sm:inline">Secure Checkout</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          
-          {/* LEFT: Steps */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* STEP 1: Address */}
-            <StepCard 
-              stepNumber={1} 
-              title="Shipping Address" 
-              isActive={currentStep === 1}
-              isCompleted={currentStep > 1}
-              icon={<MapPin className="w-5 h-5" />}
-              onEdit={() => setCurrentStep(1)}
-              summary={currentStep > 1 ? `${formData.address}, ${formData.city}` : null}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Input name="firstName" label="First Name" value={formData.firstName} onChange={handleChange} />
-                <Input name="lastName" label="Last Name" value={formData.lastName} onChange={handleChange} />
-                
-                <div className="md:col-span-2">
-                   <Input name="address" label="Street Address" value={formData.address} onChange={handleChange} required />
-                </div>
-                
-                <Input name="city" label="City" value={formData.city} onChange={handleChange} required />
-                <Input name="postal_code" label="Postal Code" value={formData.postal_code} onChange={handleChange} required />
-                
-                <Input name="country" label="Country" value={formData.country} onChange={handleChange} required />
-                <Input name="phone_number" label="Phone Number" value={formData.phone_number} type="tel" onChange={handleChange} required />
-              </div>
-
-              <div className="mt-8 flex justify-end">
-                <Button onClick={() => handleStepComplete(1)}>Continue to Shipping</Button>
-              </div>
-            </StepCard>
-
-            {/* STEP 2: Shipping */}
-            <StepCard 
-              stepNumber={2} 
-              title="Shipping Method" 
-              isActive={currentStep === 2}
-              isCompleted={currentStep > 2}
-              icon={<Truck className="w-5 h-5" />}
-              onEdit={() => setCurrentStep(2)}
-              summary={currentStep > 2 ? (formData.shippingMethod === "express" ? "Express ($25.00)" : "Standard (Free)") : null}
-            >
-              <div className="space-y-4">
-                <RadioBox 
-                  id="standard"
-                  name="shippingMethod"
-                  value="standard"
-                  checked={formData.shippingMethod === "standard"}
-                  onChange={handleChange}
-                  title="Standard Delivery"
-                  desc="4-7 Business Days"
-                  price="FREE"
-                />
-                <RadioBox 
-                  id="express"
-                  name="shippingMethod"
-                  value="express"
-                  checked={formData.shippingMethod === "express"}
-                  onChange={handleChange}
-                  title="Express Delivery"
-                  desc="2-3 Business Days"
-                  price="$25.00"
-                />
-              </div>
-
-              <div className="mt-8 flex justify-end">
-                <Button onClick={() => handleStepComplete(2)}>Continue to Payment</Button>
-              </div>
-            </StepCard>
-
-            {/* STEP 3: Payment */}
-            <StepCard 
-              stepNumber={3} 
-              title="Payment" 
-              isActive={currentStep === 3}
-              isCompleted={false}
-              icon={<CreditCard className="w-5 h-5" />}
-            >
-              <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200 mb-6 flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                <p className="text-sm text-emerald-800">All transactions are secure and encrypted.</p>
-              </div>
-
-              <div className="space-y-5">
-                <Input name="cardNumber" label="Card Number" placeholder="0000 0000 0000 0000" value={formData.cardNumber} onChange={handleChange} icon={<CreditCard className="w-4 h-4 text-slate-400" />} />
-                <div className="grid grid-cols-2 gap-5">
-                  <Input name="expiry" label="Expiration (MM/YY)" placeholder="MM/YY" value={formData.expiry} onChange={handleChange} />
-                  <Input name="cvc" label="Security Code" placeholder="123" value={formData.cvc} onChange={handleChange} />
-                </div>
-              </div>
-
-              <div className="mt-8">
-                 <Button onClick={handlePlaceOrder} isLoading={submitting} fullWidth>
-                    Pay ${total.toFixed(2)} & Place Order
-                 </Button>
-                 <p className="text-xs text-center text-slate-500 mt-4">
-                   By placing this order, you agree to our Terms of Service.
-                 </p>
-              </div>
-            </StepCard>
-
-          </div>
-
-          {/* RIGHT: Summary */}
-          <div className="lg:col-span-5">
-             <div className="sticky top-24">
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                   <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                      <h3 className="font-bold text-lg text-slate-900">Order Summary</h3>
-                      <span className="text-sm text-slate-600">{cart.items.length} Items</span>
-                   </div>
-                   
-                   <div className="px-6 py-6 max-h-80 overflow-y-auto">
-                      {cart.items.map((item) => (
-                        <div key={item.id} className="flex gap-4 mb-6 last:mb-0">
-                          <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center">
-                             <span className="text-xs text-slate-400">Img</span>
-                          </div>
-                          <div className="flex-1">
-                             <div className="flex justify-between items-start">
-                                <h4 className="font-medium text-sm text-slate-900">{item.name}</h4>
-                                <p className="font-semibold text-sm text-slate-900">${item.price.toFixed(2)}</p>
-                             </div>
-                             <p className="text-xs text-slate-500 mt-1">Size: {item.size} • Color: {item.color}</p>
-                          </div>
-                        </div>
-                      ))}
-                   </div>
-
-                   <div className="border-t border-slate-200 px-6 py-6 space-y-3">
-                      <SummaryRow label="Subtotal" value={`$${cart.subtotal.toFixed(2)}`} />
-                      <SummaryRow label="Shipping" value={shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`} />
-                      <SummaryRow label="Estimated Tax" value={`$${tax.toFixed(2)}`} />
-                      <div className="border-t border-slate-200 pt-4 mt-4 flex justify-between items-center">
-                         <span className="text-lg font-extrabold text-slate-900">Total</span>
-                         <span className="text-2xl font-extrabold text-indigo-600">${total.toFixed(2)}</span>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="mt-6 flex items-center justify-center gap-4 opacity-60">
-                   <span className="text-xs font-semibold border border-slate-300 px-3 py-1.5 rounded-lg text-slate-600">Cash on Delivery</span>
-                   <span className="text-xs font-semibold border border-slate-300 px-3 py-1.5 rounded-lg text-slate-600">JazzCash</span>
-                   <span className="text-xs font-semibold border border-slate-300 px-3 py-1.5 rounded-lg text-slate-600">Easypaisa</span>
-                </div>
-             </div>
-          </div>
-
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-}
-
-// Sub-Components
-
-function StepCard({ stepNumber, title, isActive, isCompleted, icon, children, onEdit, summary }) {
-  return (
-    <div className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${isActive ? 'ring-2 ring-indigo-600 shadow-md' : 'border-slate-200 shadow-sm'}`}>
-      <div 
-        className={`px-6 py-4 flex items-center justify-between cursor-pointer ${!isActive && !isCompleted && 'opacity-50 pointer-events-none'}`}
-        onClick={isCompleted ? onEdit : undefined}
-      >
-        <div className="flex items-center gap-4">
-           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-             isCompleted ? 'bg-emerald-100 text-emerald-700' : 
-             isActive ? 'bg-indigo-600 text-white' : 
-             'bg-slate-100 text-slate-500'
-           }`}>
-              {isCompleted ? <Check className="w-5 h-5" /> : stepNumber}
-           </div>
-           <div>
-              <h3 className={`text-lg font-bold ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{title}</h3>
-              {!isActive && summary && <p className="text-sm text-slate-500 mt-0.5">{summary}</p>}
-           </div>
-        </div>
-        {isCompleted && (
-          <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700 underline">Edit</button>
-        )}
+  if (cartItems.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <AlertCircle size={48} className="text-orange-500" />
+        <p className="mt-4 font-semibold">Your cart is empty</p>
       </div>
-      
-      <AnimatePresence>
-        {isActive && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-6xl mx-auto px-4 py-10 grid md:grid-cols-2 gap-10">
+        {/* SHIPPING FORM */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <Truck /> Shipping Details
+          </h2>
+
+          <Formik
+            initialValues={initialFormValues}
+            validationSchema={CheckoutSchema}
+            enableReinitialize={true}
+            onSubmit={handlePlaceOrder}
           >
-            <div className="px-6 pb-8 pt-2">
-              {children}
+            {({ isSubmitting, values, setFieldValue }) => (
+              <Form>
+                <Field
+                  label="Phone Number"
+                  name="phone_number"
+                  component={FormikInput}
+                />
+                <Field
+                  label="Address"
+                  name="address"
+                  component={FormikInput}
+                />
+                <Field
+                  label="City"
+                  name="city"
+                  component={FormikInput}
+                />
+                <Field
+                  label="Postal Code"
+                  name="postal_code"
+                  component={FormikInput}
+                />
+                <Field
+                  label="Country"
+                  name="country"
+                  component={FormikInput}
+                />
+
+                <div className="mt-8 mb-6">
+                  <h3 className="font-bold text-md mb-4 flex items-center gap-2">
+                    <CreditCard size={20} /> Payment Method
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => values.payment_method !== "COD" && setFieldValue("payment_method", "COD")}
+                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${values.payment_method === "COD" ? "border-orange-500 bg-orange-50" : "border-slate-100 hover:border-slate-200"}`}
+                    >
+                      <Banknote className={values.payment_method === "COD" ? "text-orange-600" : "text-slate-400"} />
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${values.payment_method === "COD" ? "text-orange-600" : "text-slate-400"}`}>Cash on Delivery</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => values.payment_method !== "Card" && setFieldValue("payment_method", "Card")}
+                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${values.payment_method === "Card" ? "border-orange-500 bg-orange-50" : "border-slate-100 hover:border-slate-200"}`}
+                    >
+                      <CreditCard className={values.payment_method === "Card" ? "text-orange-600" : "text-slate-400"} />
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${values.payment_method === "Card" ? "text-orange-600" : "text-slate-400"}`}>Credit Card</span>
+                    </button>
+                  </div>
+                </div>
+
+                {values.payment_method === "Card" && (
+                  <div className="mt-6 p-6 bg-slate-50 rounded-2xl space-y-4 border border-slate-100 animate-fade-in">
+                    <Field
+                      label="Card Number"
+                      name="card_number"
+                      placeholder="0000 0000 0000 0000"
+                      component={FormikInput}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field
+                        label="Expiry (MM/YY)"
+                        name="card_expiry"
+                        placeholder="12/25"
+                        component={FormikInput}
+                      />
+                      <Field
+                        label="CVV"
+                        name="card_cvv"
+                        placeholder="123"
+                        component={FormikInput}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex gap-2">
+                  <CheckCircle className="text-emerald-600" />
+                  <p className="text-sm text-emerald-800 italic font-medium">
+                    {values.payment_method === "COD" ? "You'll pay when your order arrives." : "Secure payment will be processed immediately."}
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  variant="solid"
+                  className="mt-6 w-full"
+                >
+                  {isSubmitting
+                    ? "Placing Order..."
+                    : `Place Order (Rs. ${total.toLocaleString("en-PK")})`}
+                </Button>
+              </Form>
+            )}
+          </Formik>
+        </div>
+
+        {/* ORDER SUMMARY */}
+        <div className="bg-white p-6 rounded-xl shadow h-fit">
+          <h2 className="font-bold text-lg mb-4">Order Summary</h2>
+
+          {cartItems.map((item) => (
+            <div key={item.id} className="flex justify-between text-sm mb-2">
+              <span>{item.title} × {item.quantity}</span>
+              <span>Rs. {(item.price * item.quantity).toLocaleString("en-PK")}</span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+          ))}
 
-function Input({ label, name, icon, ...props }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-xs font-semibold uppercase tracking-wider text-slate-700 pl-1">{label}</label>
-      <div className="relative">
-        <input 
-          id={name}
-          name={name}
-          className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 transition-all"
-          {...props}
-        />
-        {icon && <div className="absolute right-3 top-3">{icon}</div>}
-      </div>
-    </div>
-  );
-}
+          <hr className="my-4" />
 
-function RadioBox({ id, name, value, checked, onChange, title, desc, price }) {
-  return (
-    <label htmlFor={id} className={`relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${checked ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'}`}>
-      <div className="flex items-center gap-3">
-        <input 
-          type="radio" 
-          id={id} 
-          name={name} 
-          value={value} 
-          checked={checked} 
-          onChange={onChange}
-          className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-slate-300"
-        />
-        <div>
-          <span className="block text-sm font-bold text-slate-900">{title}</span>
-          <span className="block text-xs text-slate-600">{desc}</span>
+          <Summary label="Subtotal" value={subtotal} />
+          <Summary label="Shipping" value={shippingFee} />
+          <Summary label="Tax" value={taxAmount} />
+
+          <div className="flex justify-between font-extrabold mt-4">
+            <span>Total</span>
+            <span>Rs. {total.toLocaleString("en-PK")}</span>
+          </div>
         </div>
       </div>
-      <span className="text-sm font-bold text-slate-900">{price}</span>
-    </label>
-  );
-}
 
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex justify-between items-center text-sm">
-       <span className="text-slate-600">{label}</span>
-       <span className="font-medium text-slate-900">{value}</span>
+      <ConfirmationModal
+        isOpen={conf.open}
+        onClose={() => setConf({ ...conf, open: false })}
+        onConfirm={conf.onConfirm}
+        title={conf.title}
+        message={conf.message}
+        type={conf.type}
+        hideCancel={conf.hideCancel}
+        confirmText="OK"
+      />
     </div>
   );
 }
 
-function Button({ children, onClick, isLoading, fullWidth }) {
+/* =========================
+   COMPONENTS
+========================== */
+
+function FormikInput({ label, field, form: { touched, errors }, ...props }) {
   return (
-    <button 
-      onClick={onClick}
-      disabled={isLoading}
-      className={`bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg transition-all transform active:scale-[0.98] shadow-lg shadow-indigo-500/30 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${fullWidth ? 'w-full' : ''}`}
-    >
-      {isLoading ? (
-        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-      ) : (
-        children
-      )}
-    </button>
+    <div className="mb-4">
+      <Input
+        label={label}
+        {...field}
+        {...props}
+        error={errors[field.name]}
+        touched={touched[field.name]}
+      />
+    </div>
+  );
+}
+
+function Summary({ label, value }) {
+  return (
+    <div className="flex justify-between text-sm mb-2">
+      <span>{label}</span>
+      <span>Rs. {value.toLocaleString("en-PK")}</span>
+    </div>
   );
 }
